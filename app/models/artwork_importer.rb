@@ -33,12 +33,14 @@ class ArtworkImporter
     active reviewed weight
   ].freeze
 
-  # backoff: seconds to wait before retry N. Injectable so tests can exercise
-  # the retry path without actually sleeping.
-  def initialize(attributes, io: nil, backoff: ->(attempt) { 2**attempt })
+  # backoff: seconds to wait before retry N.
+  # sleeper: how to wait. Injectable together so tests exercise the real retry
+  # path without spending real time in it.
+  def initialize(attributes, io: nil, backoff: ->(attempt) { 2**attempt }, sleeper: method(:sleep))
     @attributes = attributes.to_h.with_indifferent_access
     @io = io
     @backoff = backoff
+    @sleeper = sleeper
     @error = nil
   end
 
@@ -156,7 +158,7 @@ class ArtworkImporter
         URI.open(uri, "User-Agent" => USER_AGENT, redirect: true, read_timeout: 30)
       rescue StandardError => e
         if attempt < MAX_ATTEMPTS
-          sleep @backoff.call(attempt)
+          @sleeper.call(@backoff.call(attempt))
           retry
         end
         @error = "couldn't fetch #{uri} after #{MAX_ATTEMPTS} attempts: #{e.class}"
