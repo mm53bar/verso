@@ -44,9 +44,14 @@ services:
       # own schedule never sees a half-written file.
       # - /path/to/frame-art:/rails/delivery:rw
     ports:
-      - "3215:80"                    # host:container — the container listens on 80
+      - "3215:8080"                  # host:container
     environment:
       TZ: UTC
+
+      # Thruster listens here. The image's default is port 80, which a non-root
+      # container user cannot always bind — set a high port and avoid finding
+      # out at deploy time.
+      HTTP_PORT: 8080
 
       # Rails session/cookie signing key (required). Generate with: openssl rand -hex 64
       SECRET_KEY_BASE: replace-with-64-byte-hex
