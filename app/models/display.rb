@@ -21,6 +21,7 @@ class Display < ApplicationRecord
   validates :file_path, presence: true, if: :file_delivery?
   validates :max_crop_fraction,
             numericality: { greater_than_or_equal_to: 0, less_than: 1 }
+  validate :file_path_stays_within_delivery_root, if: -> { file_path.present? }
 
   normalizes :name, with: ->(name) { name.squish }
 
@@ -30,6 +31,16 @@ class Display < ApplicationRecord
 
   def http_delivery? = delivery == "http"
   def file_delivery? = delivery == "file"
+
+  # Where the rotation job actually writes. `file_path` is stored relative to
+  # the configured delivery root so that an operator can put the directory
+  # wherever their disk is laid out, and so that a row in an unauthenticated
+  # app cannot name a file outside it.
+  def absolute_file_path
+    return if file_path.blank?
+
+    Verso.delivery_root.join(file_path).expand_path
+  end
 
   def aspect_ratio = (width.to_d / height).round(4)
 
@@ -88,5 +99,16 @@ class Display < ApplicationRecord
   private
     def overridden_artwork_ids(allowed)
       display_overrides.where(allowed: allowed).pluck(:artwork_id)
+    end
+
+    # Pathname#join replaces the root outright when given an absolute path, and
+    # expand_path resolves any "..", so both escape attempts land outside the
+    # root and are caught by the same comparison.
+    def file_path_stays_within_delivery_root
+      root = Verso.delivery_root.expand_path
+
+      unless absolute_file_path.to_s.start_with?("#{root}#{File::SEPARATOR}")
+        errors.add(:file_path, "must stay inside the configured delivery directory")
+      end
     end
 end

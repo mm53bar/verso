@@ -15,6 +15,7 @@ television:
   height: 2160
   cycle_seconds: 86400
   delivery: file
-  file_path: /srv/verso/current.jpg
+  # Relative to the configured delivery root, never an absolute path.
+  file_path: television/current.jpg
   max_crop_fraction: 0.25
   active: true

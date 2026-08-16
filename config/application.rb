@@ -7,6 +7,34 @@ require "rails/all"
 Bundler.require(*Rails.groups)
 
 module Verso
+  # Every directory verso reads or writes is configuration, never a literal in
+  # the code. This app is public and other people will lay their disks out
+  # their own way; a path baked into a model is a path they cannot change
+  # without a fork.
+  #
+  # All three default to somewhere inside the app's own storage directory, so a
+  # fresh clone runs with no configuration at all, and a deployment overrides
+  # whichever ones it mounts elsewhere.
+
+  # Where Active Storage keeps blobs. Read by config/storage.yml.
+  def self.storage_root
+    Pathname.new(ENV.fetch("VERSO_STORAGE_PATH") { Rails.root.join("storage").to_s })
+  end
+
+  # Where ArtworkExporter writes originals and its manifest — the copy of the
+  # collection that does not need verso to be readable.
+  def self.export_root
+    Pathname.new(ENV.fetch("VERSO_EXPORT_PATH") { storage_root.join("export").to_s })
+  end
+
+  # The one directory tree file-delivery displays may write into. A Display's
+  # file_path is relative to this and is not permitted to escape it: verso has
+  # no authentication, so an absolute path in a database column would let
+  # anyone who can reach the app overwrite any file the process can.
+  def self.delivery_root
+    Pathname.new(ENV.fetch("VERSO_DELIVERY_PATH") { storage_root.join("delivery").to_s })
+  end
+
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1

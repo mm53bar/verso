@@ -128,4 +128,48 @@ class DisplayTest < ActiveSupport::TestCase
 
     assert_not @kiosk.valid?
   end
+
+  test "the write target resolves under the configured delivery root" do
+    expected = Verso.delivery_root.join("television/current.jpg").expand_path
+
+    assert_equal expected, @television.absolute_file_path
+  end
+
+  test "the write target follows the configured root rather than a baked-in path" do
+    Dir.mktmpdir do |elsewhere|
+      with_delivery_root(elsewhere) do
+        assert_equal Pathname.new(elsewhere).join("television/current.jpg"),
+                     @television.reload.absolute_file_path
+      end
+    end
+  end
+
+  test "an absolute file path is rejected" do
+    @television.file_path = "/etc/passwd"
+
+    assert_not @television.valid?
+    assert_includes @television.errors[:file_path],
+                    "must stay inside the configured delivery directory"
+  end
+
+  test "a traversing file path is rejected" do
+    @television.file_path = "../../etc/passwd"
+
+    assert_not @television.valid?
+  end
+
+  test "a nested relative path is allowed" do
+    @television.file_path = "screens/living-room/current.jpg"
+
+    assert_predicate @television, :valid?
+  end
+
+  private
+    def with_delivery_root(path)
+      original = ENV["VERSO_DELIVERY_PATH"]
+      ENV["VERSO_DELIVERY_PATH"] = path.to_s
+      yield
+    ensure
+      ENV["VERSO_DELIVERY_PATH"] = original
+    end
 end
