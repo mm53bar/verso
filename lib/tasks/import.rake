@@ -32,3 +32,23 @@ namespace :verso do
     end
   end
 end
+
+namespace :verso do
+  desc "Rebuild the collection from an export directory: bin/rails 'verso:restore[/path/to/export]'"
+  task :restore, [ :path ] => :environment do |_task, args|
+    path = args[:path].presence || Verso.export_root
+    manifest = Pathname.new(path).join(ArtworkExporter::MANIFEST)
+    abort "no manifest at #{manifest}" unless manifest.exist?
+
+    count = JSON.parse(manifest.read).fetch("count", "?")
+    puts "restoring #{count} artworks from #{path}"
+
+    results = ArtworkImporter.from_export(path)
+    failed = results.reject(&:success?)
+
+    puts "restored #{results.length - failed.length} of #{results.length}"
+    failed.each { |result| puts "  failed: #{result.error}" }
+
+    abort "restore incomplete" if failed.any?
+  end
+end
