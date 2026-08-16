@@ -1,29 +1,17 @@
-# Be sure to restart your server when you modify this file.
-
-# Define an application-wide content security policy.
-# See the Securing Rails Applications Guide for more information:
-# https://guides.rubyonrails.org/security.html#content-security-policy-header
-
-# Rails.application.configure do
-#   config.content_security_policy do |policy|
-#     policy.default_src :self, :https
-#     policy.font_src    :self, :https, :data
-#     policy.img_src     :self, :https, :data
-#     policy.object_src  :none
-#     policy.script_src  :self, :https
-#     policy.style_src   :self, :https
-#     # Specify URI for violation reports
-#     # policy.report_uri "/csp-violation-report-endpoint"
-#   end
+# frame-ancestors is the only directive in the policy.
 #
-#   # Generate session nonces for permitted importmap, inline scripts, and inline styles.
-#   config.content_security_policy_nonce_generator = ->(request) { request.session.id.to_s }
-#   config.content_security_policy_nonce_directives = %w(script-src style-src)
+# default_src and script_src would break the importmap and Turbo setup, and
+# there is no untrusted content in verso to defend against with them. What is
+# needed is narrow: the household dashboard has to be allowed to embed the story
+# page in an iframe, which X-Frame-Options cannot express — see
+# docs/adr/20260816-framed-by-home-assistant.md.
 #
-#   # Automatically add `nonce` to `javascript_tag`, `javascript_include_tag`, and `stylesheet_link_tag`
-#   # if the corresponding directives are specified in `content_security_policy_nonce_directives`.
-#   # config.content_security_policy_nonce_auto = true
-#
-#   # Report violations without enforcing the policy.
-#   # config.content_security_policy_report_only = true
-# end
+# Application-wide rather than scoped to the kiosk route. Scoping would be a
+# false economy: the same screen will plausibly want another page next, and a
+# per-controller policy is more machinery than the risk warrants on a LAN-only
+# app with no login.
+Rails.application.configure do
+  config.content_security_policy do |policy|
+    policy.frame_ancestors :self, *Verso::LOOPBACK_FRAME_ANCESTORS, *Verso.frame_ancestors
+  end
+end

@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for(:title) || "Verso" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+  </head>
+
+  <%# No site chrome. This page is framed by a dashboard that has its own. %>
+  <body class="bg-neutral-950 text-neutral-100 antialiased">
+    <%= yield %>
+  </body>
+</html>

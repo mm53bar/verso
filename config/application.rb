@@ -16,6 +16,20 @@ module Verso
   # fresh clone runs with no configuration at all, and a deployment overrides
   # whichever ones it mounts elsewhere.
 
+  # Kiosk browsers commonly serve their dashboard from a port on the device
+  # itself, so the page framing verso is a loopback origin whose port belongs to
+  # whichever kiosk app is installed. Allowing loopback outright means a kiosk
+  # needs no configuration at all. It grants little: a page can only claim this
+  # origin by already running on the viewer's own machine.
+  LOOPBACK_FRAME_ANCESTORS = %w[ http://127.0.0.1:* http://localhost:* ].freeze
+
+  # Origins allowed to embed verso in an iframe, from a comma-separated env var.
+  # Empty (the default) means loopback and same-origin only. Feeds CSP's
+  # frame-ancestors — see docs/adr/20260816-framed-by-home-assistant.md.
+  def self.frame_ancestors(value = ENV["VERSO_FRAME_ANCESTORS"])
+    value.to_s.split(",").map(&:strip).reject(&:empty?)
+  end
+
   # Where Active Storage keeps blobs. Read by config/storage.yml.
   def self.storage_root
     Pathname.new(ENV.fetch("VERSO_STORAGE_PATH") { Rails.root.join("storage").to_s })
@@ -45,6 +59,13 @@ module Verso
     config.autoload_lib(ignore: %w[assets tasks])
 
     config.time_zone = ENV.fetch("TZ", "UTC")
+
+    # Rails defaults to X-Frame-Options: SAMEORIGIN, which has no multi-origin
+    # form and which browsers will not let you combine with CSP frame-ancestors.
+    # The kiosk has to be able to frame the story page, so the header goes and
+    # frame-ancestors takes over — see the initializer and
+    # docs/adr/20260816-framed-by-home-assistant.md.
+    config.action_dispatch.default_headers.delete("X-Frame-Options")
 
     # The running build's git SHA, written into REVISION by the Docker build and
     # absent in development. Shown in the footer, so a deploy that silently did

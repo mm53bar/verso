@@ -14,6 +14,10 @@ Rails.application.routes.draw do
   get "artworks/:artwork_slug/renditions/:display_slug" => "renditions#show",
       as: :artwork_rendition, defaults: { format: :jpg }
 
+  # The story page a wall screen frames: what is on that screen right now.
+  # Separate from the browse UI on purpose — see the controller.
+  get "kiosk/:display_slug" => "kiosk#show", as: :kiosk
+
   root "artworks#index"
   resources :artworks, only: %i[ index show ]
   resources :displays, only: %i[ index show ]
