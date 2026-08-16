@@ -13,3 +13,10 @@ production:
   clear_solid_queue_finished_jobs:
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
     schedule: every hour at minute 12
+
+  # Keeps a copy of the collection that can be read without verso. Idempotent
+  # by checksum, so all but the first run are nearly free — see
+  # docs/adr/20260816-active-storage-with-round-trippable-export.md.
+  export_artworks:
+    class: ArtworkExportJob
+    schedule: every day at 4am
