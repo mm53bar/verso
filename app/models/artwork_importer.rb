@@ -20,7 +20,10 @@ class ArtworkImporter
     def success? = error.nil?
   end
 
-  USER_AGENT = "verso-importer"
+  # Wikimedia's user-agent policy asks tools to identify themselves and give a
+  # way to be contacted, and throttles generic agents harder. Overridable so a
+  # fork does not impersonate this one.
+  USER_AGENT = ENV.fetch("VERSO_USER_AGENT", "verso/1.0 (https://github.com/mm53bar/verso)")
   MAX_ATTEMPTS = 4
 
   # Fields an importer may set. Anything else in the payload is ignored, so a
