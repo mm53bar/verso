@@ -87,6 +87,73 @@ class Display < ApplicationRecord
       .or(suitable.where(id: overridden_artwork_ids(true)))
   end
 
+  # Move to the next artwork: record the showing, and line up what follows so
+  # the feed can tell a client what to preload.
+  #
+  # Returns the artwork now showing, or nil when nothing is eligible — an empty
+  # collection leaves whatever is on screen alone rather than blanking it.
+  def advance!(now: Time.current)
+    upcoming = committed_next || pick(now: now)
+    return if upcoming.nil?
+
+    transaction do
+      display_events.create!(artwork: upcoming, shown_at: now)
+      update!(current_artwork: upcoming, current_since: now)
+      # Picked after the event is recorded, so the piece just shown has spent a
+      # slot and will not immediately be chosen again.
+      update!(next_artwork: pick(now: now))
+    end
+
+    upcoming
+  end
+
+  # Weighted, but coverage first. Every eligible artwork spends all of its slots
+  # before any of them gets a fresh one, which is what the old shuffle-on-a-timer
+  # arrangement could never promise: it re-randomised periodically, so rotation
+  # was effectively random *with* replacement and some pieces went unseen for
+  # weeks.
+  def pick(now: Time.current)
+    update!(round_started_at: now) if round_started_at.nil?
+
+    remaining = remaining_slots
+
+    if remaining.empty?
+      update!(round_started_at: now)
+      remaining = remaining_slots
+    end
+
+    # Never show the same piece twice running when there is an alternative. A
+    # weighted artwork holds several slots in a round and would otherwise spend
+    # two back to back, which on a wall reads as the rotation having stopped.
+    alternatives = remaining.except(current_artwork)
+
+    weighted_sample(alternatives.presence || remaining)
+  end
+
+  # Put the current rendition where a file-delivery consumer will find it.
+  #
+  # Written to a temporary name in the same directory and renamed into place.
+  # rename() within one filesystem is atomic, so a consumer reading on its own
+  # unrelated schedule sees either the old image or the new one and never a
+  # half-written JPEG. Writing the destination directly is the one way to get
+  # file delivery wrong, and the failure would be intermittent and blamed on
+  # the consumer.
+  def deliver!
+    return false unless file_delivery? && current_artwork&.original&.attached?
+
+    destination = absolute_file_path
+    destination.dirname.mkpath
+    temporary = destination.dirname.join(".#{destination.basename}.#{SecureRandom.hex(4)}")
+
+    begin
+      temporary.binwrite(current_artwork.rendition_for(self).processed.download)
+      File.rename(temporary, destination)
+      true
+    ensure
+      FileUtils.rm_f(temporary)
+    end
+  end
+
   # An artwork's own weight scaled by what this screen thinks of its
   # collection. Lets one sub-collection be frequent on one screen and absent
   # from another without duplicating a byte.
@@ -97,6 +164,44 @@ class Display < ApplicationRecord
   end
 
   private
+    # The piece lined up last time, provided it is still showable — a curator
+    # may have deactivated it, or a re-import may have changed its dimensions,
+    # in the meantime.
+    def committed_next
+      return if next_artwork_id.nil?
+
+      next_artwork if eligible_artworks.exists?(next_artwork_id)
+    end
+
+    # artwork => slots left this round. An artwork gets `weight_for` slots and
+    # spends one per showing.
+    def remaining_slots
+      spent = display_events
+        .where(shown_at: round_started_at.., artwork_id: eligible_artworks.select(:id))
+        .group(:artwork_id)
+        .count
+
+      eligible_artworks.each_with_object({}) do |artwork, slots|
+        left = weight_for(artwork) - spent.fetch(artwork.id, 0)
+        slots[artwork] = left if left.positive?
+      end
+    end
+
+    # Weighted by slots left rather than uniform, so a piece with three
+    # showings due is spread through the round instead of clustering at the end.
+    def weighted_sample(slots)
+      total = slots.values.sum
+      return if total.zero?
+
+      target = rand(total)
+      slots.each do |artwork, weight|
+        target -= weight
+        return artwork if target.negative?
+      end
+
+      slots.keys.last
+    end
+
     def overridden_artwork_ids(allowed)
       display_overrides.where(allowed: allowed).pluck(:artwork_id)
     end

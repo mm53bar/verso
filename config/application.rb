@@ -44,6 +44,16 @@ module Verso
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    config.time_zone = ENV.fetch("TZ", "UTC")
+
+    # The running build's git SHA, written into REVISION by the Docker build and
+    # absent in development. Shown in the footer, so a deploy that silently did
+    # not land says so on the page instead of being debugged from the outside.
+    revision       = Rails.root.join("REVISION")
+    revision_short = Rails.root.join("REVISION_SHORT")
+    config.x.git_sha       = revision.exist?       ? revision.read.strip       : "dev"
+    config.x.git_sha_short = revision_short.exist? ? revision_short.read.strip : "dev"
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

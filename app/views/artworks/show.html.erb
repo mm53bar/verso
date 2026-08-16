@@ -1,0 +1,57 @@
+<% content_for :title, @artwork.display_title %>
+
+<p class="mb-6 text-sm"><%= link_to "← Collection", artworks_path, class: "text-neutral-500 hover:underline" %></p>
+
+<article class="grid gap-8 lg:grid-cols-[3fr_2fr]">
+  <div>
+    <% if @artwork.original.attached? %>
+      <%= image_tag @artwork.original.variant(resize_to_limit: [ 1400, 1400 ], format: :jpeg),
+          class: "w-full rounded" %>
+    <% end %>
+  </div>
+
+  <div>
+    <h1 class="text-2xl font-semibold tracking-tight"><%= @artwork.display_title %></h1>
+    <p class="mt-1 text-neutral-600">
+      <%= @artwork.artist&.name || "Artist unknown" %><%= " · #{@artwork.year_text}" if @artwork.year_text.present? %>
+    </p>
+
+    <% if @artwork.blurb.present? %>
+      <p class="mt-4 text-sm leading-relaxed"><%= @artwork.blurb %></p>
+    <% end %>
+    <% if @artwork.story.present? %>
+      <div class="mt-4 space-y-3 text-sm leading-relaxed"><%= simple_format @artwork.story %></div>
+    <% end %>
+
+    <dl class="mt-6 space-y-2 border-t pt-4 text-sm">
+      <% {
+           "Collection" => @artwork.collection.name,
+           "Medium" => @artwork.medium,
+           "Where it hangs" => @artwork.current_location,
+           "Dimensions" => (@artwork.width ? "#{@artwork.width} × #{@artwork.height}" : nil),
+           "Aspect" => @artwork.aspect_ratio&.to_f&.round(2),
+           "Licence" => @artwork.license,
+           "Credit" => @artwork.credit_line,
+           "Weight" => @artwork.weight
+         }.each do |label, value| %>
+        <% next if value.blank? %>
+        <div class="flex gap-3">
+          <dt class="w-36 shrink-0 text-neutral-500"><%= label %></dt>
+          <dd class="min-w-0 break-words"><%= value %></dd>
+        </div>
+      <% end %>
+    </dl>
+
+    <p class="mt-4 text-sm">
+      <% if @displays.any? %>
+        Shows on <%= safe_join(@displays.map { |d| link_to d.name, display_path(d), class: "underline" }, ", ") %>.
+      <% else %>
+        <span class="text-amber-700">Not eligible for any screen — too small, the wrong shape, or unreviewed.</span>
+      <% end %>
+    </p>
+
+    <% if @artwork.source_url.present? %>
+      <p class="mt-2 text-sm"><%= link_to "Source", @artwork.source_url, class: "text-neutral-500 underline" %></p>
+    <% end %>
+  </div>
+</article>

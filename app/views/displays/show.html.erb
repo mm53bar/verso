@@ -1,0 +1,47 @@
+<% content_for :title, @display.name %>
+
+<p class="mb-6 text-sm"><%= link_to "← Screens", displays_path, class: "text-neutral-500 hover:underline" %></p>
+
+<h1 class="text-3xl font-semibold tracking-tight"><%= @display.name %></h1>
+<p class="mt-1 text-sm text-neutral-500">
+  <%= @display.width %>×<%= @display.height %> ·
+  every <%= distance_of_time_in_words(@display.cycle_seconds) %> ·
+  <%= @display.delivery %> delivery ·
+  <%= @eligible %> eligible of <%= Artwork.count %>
+</p>
+<p class="mt-1 text-sm">
+  <%= link_to "current.json", display_current_path(@display.slug), class: "text-neutral-500 underline" %>
+</p>
+
+<% if @display.current_artwork %>
+  <section class="mt-6">
+    <h2 class="text-sm font-medium uppercase tracking-wide text-neutral-500">Showing now</h2>
+    <%= link_to artwork_path(@display.current_artwork), class: "mt-2 block" do %>
+      <%= image_tag @display.current_artwork.original.variant(
+            resize_to_fill: [ @display.width / 2, @display.height / 2 ], format: :jpeg),
+          class: "w-full max-w-2xl rounded" %>
+      <p class="mt-2 font-medium"><%= @display.current_artwork.display_title %></p>
+    <% end %>
+    <p class="text-sm text-neutral-500">
+      since <%= @display.current_since&.strftime("%b %-d, %H:%M") %>
+    </p>
+  </section>
+<% end %>
+
+<section class="mt-8">
+  <h2 class="text-sm font-medium uppercase tracking-wide text-neutral-500">Recently shown</h2>
+  <ol class="mt-2 divide-y text-sm">
+    <% @recent.each do |event| %>
+      <li class="flex justify-between gap-4 py-1.5">
+        <span class="truncate">
+          <%= link_to event.artwork.display_title, artwork_path(event.artwork), class: "hover:underline" %>
+          <span class="text-neutral-500"><%= event.artwork.artist&.name %></span>
+        </span>
+        <span class="shrink-0 text-neutral-500"><%= event.shown_at.strftime("%b %-d, %H:%M") %></span>
+      </li>
+    <% end %>
+  </ol>
+  <% if @recent.empty? %>
+    <p class="mt-2 text-sm text-neutral-500">No history yet — the rotation job has not run.</p>
+  <% end %>
+</section>

@@ -1,0 +1,30 @@
+<% content_for :title, "Screens" %>
+
+<h1 class="text-3xl font-semibold tracking-tight">Screens</h1>
+
+<ul class="mt-6 grid gap-5 sm:grid-cols-2">
+  <% @displays.each do |display| %>
+    <li class="rounded border p-4">
+      <%= link_to display.name, display_path(display), class: "font-medium hover:underline" %>
+      <p class="mt-1 text-xs text-neutral-500">
+        <%= display.width %>×<%= display.height %> ·
+        every <%= distance_of_time_in_words(display.cycle_seconds) %> ·
+        <%= display.delivery %>
+      </p>
+      <% if display.current_artwork %>
+        <div class="mt-3 flex gap-3">
+          <% if display.current_artwork.original.attached? %>
+            <%= image_tag display.current_artwork.original.variant(resize_to_fill: [ 160, 100 ], format: :jpeg),
+                class: "rounded" %>
+          <% end %>
+          <div class="min-w-0 text-sm">
+            <p class="truncate font-medium"><%= display.current_artwork.display_title %></p>
+            <p class="truncate text-neutral-500"><%= display.current_artwork.artist&.name %></p>
+          </div>
+        </div>
+      <% else %>
+        <p class="mt-3 text-sm text-neutral-500">Nothing showing yet.</p>
+      <% end %>
+    </li>
+  <% end %>
+</ul>

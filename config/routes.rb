@@ -1,14 +1,20 @@
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-  # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-  # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  # What a screen should be showing. The only endpoint a screen ever calls —
+  # see docs/adr/20260816-verso-owns-the-rotation.md.
+  get "displays/:display_slug/current" => "feeds#show", as: :display_current, defaults: { format: :json }
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+  # A rendition, addressed by what it is rather than by where it is stored.
+  # Stable per artwork and display: the bytes behind this URL never change, so
+  # it can be cached hard, and regenerating a variant does not make a screen
+  # swap for no reason. An Active Storage key in the URL would do both.
+  get "artworks/:artwork_slug/renditions/:display_slug" => "renditions#show",
+      as: :artwork_rendition, defaults: { format: :jpg }
+
+  root "artworks#index"
+  resources :artworks, only: %i[ index show ]
+  resources :displays, only: %i[ index show ]
 end

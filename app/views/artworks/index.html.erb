@@ -1,0 +1,35 @@
+<% content_for :title, "Collection" %>
+
+<header class="mb-8">
+  <h1 class="text-3xl font-semibold tracking-tight">Collection</h1>
+  <p class="mt-1 text-sm text-neutral-500"><%= pluralize(@artworks.size, "artwork") %></p>
+
+  <nav class="mt-4 flex flex-wrap gap-2 text-sm">
+    <%= link_to "All", artworks_path,
+        class: "rounded-full border px-3 py-1 #{params[:collection] ? 'border-neutral-300' : 'border-neutral-900 bg-neutral-900 text-white'}" %>
+    <% @collections.each do |collection| %>
+      <%= link_to "#{collection.name} (#{collection.artworks.size})",
+          artworks_path(collection: collection.slug),
+          class: "rounded-full border px-3 py-1 #{params[:collection] == collection.slug ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-300'}" %>
+    <% end %>
+  </nav>
+</header>
+
+<ul class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+  <% @artworks.each do |artwork| %>
+    <li>
+      <%= link_to artwork_path(artwork), class: "group block" do %>
+        <div class="aspect-[16/10] overflow-hidden rounded bg-neutral-100">
+          <% if artwork.original.attached? %>
+            <%= image_tag artwork.original.variant(resize_to_fill: [ 480, 300 ], format: :jpeg),
+                loading: "lazy", class: "h-full w-full object-cover" %>
+          <% end %>
+        </div>
+        <p class="mt-2 text-sm font-medium leading-snug group-hover:underline"><%= artwork.display_title %></p>
+        <p class="text-xs text-neutral-500">
+          <%= artwork.artist&.name %><%= " · #{artwork.year_text}" if artwork.year_text.present? %>
+        </p>
+      <% end %>
+    </li>
+  <% end %>
+</ul>
