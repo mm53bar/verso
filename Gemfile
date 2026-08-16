@@ -39,7 +39,7 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images] —
 # verso stores each artwork's original at full resolution and derives a rendition
 # per display size (16:10 for the kiosk, 16:9 for the TV). libvips does the work.
-gem "image_processing", "~> 1.2"
+gem "image_processing", "~> 2.0"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
