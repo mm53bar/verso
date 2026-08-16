@@ -62,6 +62,19 @@ class RotateDisplaysJobTest < ActiveSupport::TestCase
     assert_path_exists @root.join("television/current.jpg")
   end
 
+  test "the next rendition is generated ahead of time, not at swap time" do
+    before = ActiveStorage::VariantRecord.count
+    RotateDisplaysJob.perform_now
+    assert_operator ActiveStorage::VariantRecord.count, :>, before
+
+    kiosk = displays(:kiosk).reload
+    blob = kiosk.next_artwork.original.blob
+    variation = kiosk.next_artwork.rendition_for(kiosk).variation
+
+    assert ActiveStorage::VariantRecord.exists?(blob: blob, variation_digest: variation.digest),
+      "the next artwork's variant should already exist, so the swap does not wait on libvips"
+  end
+
   test "an inactive display is left alone" do
     displays(:kiosk).update!(active: false)
 

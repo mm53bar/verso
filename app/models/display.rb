@@ -154,6 +154,24 @@ class Display < ApplicationRecord
     end
   end
 
+  # Generate the rendition for whatever comes next, so a screen never waits on
+  # libvips at the moment it swaps.
+  #
+  # Measured in production: deriving a 1920x1200 crop from a 310MB original took
+  # 27 seconds on first request and 1ms once the variant existed. A client
+  # preloading next_url warms it incidentally, but relying on that leaves the
+  # cliff in place for any client that does not, and for the first artwork after
+  # a restart.
+  def warm_next_rendition
+    return false unless next_artwork&.original&.attached?
+
+    next_artwork.rendition_for(self).processed
+    true
+  rescue StandardError => e
+    Rails.logger.warn("[verso] #{slug}: could not warm next rendition: #{e.class}: #{e.message}")
+    false
+  end
+
   # An artwork's own weight scaled by what this screen thinks of its
   # collection. Lets one sub-collection be frequent on one screen and absent
   # from another without duplicating a byte.

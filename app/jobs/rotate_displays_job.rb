@@ -23,6 +23,7 @@ class RotateDisplaysJob < ApplicationJob
       end
 
       display.deliver!
+      display.warm_next_rendition
       advanced << display.slug
       Rails.logger.info("[verso] #{display.slug}: now showing #{artwork.slug}")
     end
