@@ -1,0 +1,14 @@
+thomson:
+  name: Tom Thomson
+  slug: tom-thomson
+  birth_year: 1877
+  death_year: 1917
+  nationality: Canadian
+  bio: Painted the Ontario near north; drowned at Canoe Lake in 1917.
+
+harris:
+  name: Lawren Harris
+  slug: lawren-harris
+  birth_year: 1885
+  death_year: 1970
+  nationality: Canadian

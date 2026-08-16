@@ -1,0 +1,28 @@
+# The kiosk carries everything, with cartoons weighted up so a small
+# sub-collection is not diluted by a large one. The television carries the
+# art collections only.
+
+kiosk_canon:
+  display: kiosk
+  collection: canon
+  weight: 1
+
+kiosk_canadian:
+  display: kiosk
+  collection: canadian
+  weight: 1
+
+kiosk_cartoons:
+  display: kiosk
+  collection: cartoons
+  weight: 3
+
+television_canon:
+  display: television
+  collection: canon
+  weight: 1
+
+television_canadian:
+  display: television
+  collection: canadian
+  weight: 1

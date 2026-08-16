@@ -1,0 +1,20 @@
+kiosk:
+  name: Kiosk panel
+  slug: kiosk-panel
+  width: 1920
+  height: 1200
+  cycle_seconds: 1800
+  delivery: http
+  max_crop_fraction: 0.25
+  active: true
+
+television:
+  name: Television
+  slug: television
+  width: 3840
+  height: 2160
+  cycle_seconds: 86400
+  delivery: file
+  file_path: /srv/verso/current.jpg
+  max_crop_fraction: 0.25
+  active: true

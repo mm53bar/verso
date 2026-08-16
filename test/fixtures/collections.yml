@@ -1,0 +1,18 @@
+canon:
+  name: Wikimedia canon
+  slug: wikimedia-canon
+  weight: 1
+  minimum_aspect_ratio: 1.3
+
+canadian:
+  name: Canadian
+  slug: canadian
+  weight: 1
+  # A standard sketch panel is 8.5x10.5in. A 1.30 floor would discard most of
+  # this body of work, which is why the floor is per collection.
+  minimum_aspect_ratio: 1.235
+
+cartoons:
+  name: Cartoons
+  slug: cartoons
+  weight: 3

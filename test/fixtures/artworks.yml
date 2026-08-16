@@ -1,0 +1,80 @@
+# Fixtures skip validations and callbacks, so aspect_ratio is set explicitly
+# here rather than derived from width and height the way a saved record does it.
+
+sketch_panel:
+  title: A sketch panel
+  slug: tom-thomson-a-sketch-panel
+  artist: thomson
+  collection: canadian
+  width: 3840
+  height: 3109
+  aspect_ratio: 1.2351      # too narrow for a 16:9 screen, fine on 16:10
+  reviewed: true
+  active: true
+  weight: 1
+
+legacy_crop:
+  title: An already-cropped wallpaper
+  slug: an-already-cropped-wallpaper
+  collection: canon
+  width: 1920
+  height: 1200
+  aspect_ratio: 1.6         # right shape for the kiosk, too small for 4K
+  reviewed: true
+  active: true
+  weight: 1
+
+native_4k:
+  title: A native 4K landscape
+  slug: a-native-4k-landscape
+  artist: harris
+  collection: canon
+  width: 3840
+  height: 2160
+  aspect_ratio: 1.7778
+  reviewed: true
+  active: true
+  weight: 1
+
+panorama:
+  title: A very wide panorama
+  slug: a-very-wide-panorama
+  collection: canon
+  width: 5000
+  height: 1400
+  aspect_ratio: 3.5714      # too wide for anything without gutting it
+  reviewed: true
+  active: true
+  weight: 1
+
+unreviewed:
+  title: Not yet looked at by a human
+  slug: not-yet-looked-at-by-a-human
+  collection: canon
+  width: 3840
+  height: 2160
+  aspect_ratio: 1.7778
+  reviewed: false
+  active: true
+  weight: 1
+
+deactivated:
+  title: Switched off by a curator
+  slug: switched-off-by-a-curator
+  collection: canon
+  width: 3840
+  height: 2160
+  aspect_ratio: 1.7778
+  reviewed: true
+  active: false
+  weight: 1
+
+cartoon:
+  slug: a-cartoon-wallpaper
+  collection: cartoons
+  width: 3840
+  height: 2160
+  aspect_ratio: 1.7778
+  reviewed: true
+  active: true
+  weight: 1
