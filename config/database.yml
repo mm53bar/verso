@@ -26,19 +26,24 @@ test:
 #
 # Similarly, if you deploy your application as a Docker container, you must
 # ensure the database is located in a persisted volume.
+# The SQLite files live under the same configurable root as the Active Storage
+# blobs, deliberately: the two are useless apart, so they have to be one volume
+# that gets backed up together. See
+# docs/adr/20260816-active-storage-with-round-trippable-export.md and
+# docs/adr/20260816-filesystem-paths-are-configuration.md.
 production:
   primary:
     <<: *default
-    # database: path/to/persistent/storage/production.sqlite3
+    database: <%= Verso.storage_root.join("production.sqlite3") %>
   cache:
     <<: *default
-    # database: path/to/persistent/storage/production_cache.sqlite3
+    database: <%= Verso.storage_root.join("production_cache.sqlite3") %>
     migrations_paths: db/cache_migrate
   queue:
     <<: *default
-    # database: path/to/persistent/storage/production_queue.sqlite3
+    database: <%= Verso.storage_root.join("production_queue.sqlite3") %>
     migrations_paths: db/queue_migrate
   cable:
     <<: *default
-    # database: path/to/persistent/storage/production_cable.sqlite3
+    database: <%= Verso.storage_root.join("production_cable.sqlite3") %>
     migrations_paths: db/cable_migrate

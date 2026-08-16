@@ -1,0 +1,70 @@
+# verso — Docker Compose template.
+#
+# Copy this into your stack (plain `docker compose`, Arcane, Portainer, etc.),
+# set the volume paths, the `user:` UID:GID, and the secret, then deploy.
+#
+# ONE container runs both the web server and the background jobs: config/puma.rb
+# boots the Solid Queue supervisor in-process whenever RAILS_ENV=production
+# (baked into the image), so there is no separate worker service. That
+# supervisor is what drives the rotation — without it every screen freezes on
+# whatever it was last showing.
+#
+# No auth: verso has no login system by design — see
+# docs/adr/20260816-no-auth-needed.md. Only run it somewhere that is not
+# publicly reachable.
+#
+# Secrets are plain env vars, not Rails encrypted credentials, so this repo can
+# be public without committing anything real — see
+# docs/adr/20260816-secrets-from-env.md.
+
+services:
+  verso:
+    image: ghcr.io/mm53bar/verso:latest
+    user: "1000:1000"                # UID:GID that owns the volumes below (Synology: often 1027:100)
+    restart: unless-stopped
+    # `always` re-checks the registry on every `up`; use `missing` if the host
+    # has no registry auth for a private image.
+    pull_policy: always
+    volumes:
+      # SQLite databases AND the Active Storage blobs, together. They are
+      # useless apart — a blob tree is named by random key and means nothing
+      # without the database that indexes it — so this is one volume and it is
+      # backed up as one thing.
+      - /path/to/verso/data:/rails/storage:rw
+
+      # Optional. Where the collection is written back out in human-readable
+      # form: originals under real names plus a manifest. This is the copy that
+      # can be read without verso, so put it somewhere that does not share a
+      # disk with the volume above.
+      # - /path/to/backup/verso-export:/rails/export:rw
+
+      # Optional. Only for displays with `file` delivery. verso writes the
+      # rendition here and something else — a cron job, a TV uploader — picks it
+      # up. Written to a temp name and renamed into place, so a reader on its
+      # own schedule never sees a half-written file.
+      # - /path/to/frame-art:/rails/delivery:rw
+    ports:
+      - "3215:80"                    # host:container — the container listens on 80
+    environment:
+      TZ: UTC
+
+      # Rails session/cookie signing key (required). Generate with: openssl rand -hex 64
+      SECRET_KEY_BASE: replace-with-64-byte-hex
+
+      # Optional. Every directory verso touches is configuration; each defaults
+      # to somewhere under the app's own storage directory, so the single volume
+      # above is enough to run. Set these only to move a tree elsewhere, and
+      # remember to mount it if you do.
+      # VERSO_STORAGE_PATH: /rails/storage
+      # VERSO_EXPORT_PATH: /rails/export
+      # VERSO_DELIVERY_PATH: /rails/delivery
+
+      # Optional, and usually unnecessary. The story page is built to be framed
+      # by a dashboard, and loopback origins are allowed out of the box — a
+      # kiosk browser serves its dashboard from a port on the device itself, so
+      # that covers the normal wall-panel case with no configuration.
+      #
+      # Set this only to frame verso from a *named* host. Comma-separated, and
+      # the value is the origin of the parent page, scheme and port included —
+      # not verso's own URL. See docs/adr/20260816-framed-by-home-assistant.md.
+      # VERSO_FRAME_ANCESTORS: https://dashboard.example

@@ -35,7 +35,13 @@ port ENV.fetch("PORT", 3000)
 plugin :tmp_restart
 
 # Run the Solid Queue supervisor inside of Puma for single-server deployments.
-plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"]
+# Run Solid Queue inside Puma rather than as a separate worker process: one
+# container, no Redis. This is what actually drives the rotation — without it
+# every screen would freeze on whatever it was last showing.
+#
+# Gated to production because dev and test use the :async adapter and have no
+# queue database, so starting the supervisor there would just error.
+plugin :solid_queue if ENV.fetch("RAILS_ENV", "development") == "production"
 
 # Specify the PID file. Defaults to tmp/pids/server.pid in development.
 # In other environments, only set the PID file if requested.
