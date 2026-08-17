@@ -103,3 +103,37 @@ namespace :verso do
          "#{Artwork.where.not(current_location: [ nil, '' ]).count} of #{Artwork.count}"
   end
 end
+
+namespace :verso do
+  desc "Write each artwork's story from its own Wikipedia article"
+  task stories: :environment do
+    scope = Artwork.where.not(wikidata_qid: [ nil, "" ])
+    scope = scope.where(story: [ nil, "" ]) unless ENV["FORCE"].present?
+    puts "looking for stories for #{scope.count} artworks"
+
+    # Wikidata knows the canonical article for each work. Guessing a title from
+    # the artwork's own name lands on disambiguation pages.
+    articles = WikidataLookup.facts_for(scope.pluck(:wikidata_qid))
+      .transform_values(&:article).compact
+
+    titles = articles.transform_values { |url| CGI.unescape(url.split("/").last).tr("_", " ") }
+    puts "  #{titles.size} have an English Wikipedia article"
+
+    stories = WikipediaStory.for(titles.values)
+    puts "  #{stories.size} yielded a story worth showing"
+
+    written = 0
+    scope.find_each do |artwork|
+      title = titles[artwork.wikidata_qid]
+      story = title && stories[title]
+      next if story.nil?
+
+      artwork.update!(story: story.text, story_source_url: story.url,
+                      story_source_name: "Wikipedia")
+      written += 1
+    end
+
+    puts "  wrote #{written} stories"
+    puts "  artworks with a story: #{Artwork.where.not(story: [ nil, '' ]).count} of #{Artwork.count}"
+  end
+end

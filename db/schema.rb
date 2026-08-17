@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_001051) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_023702) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -69,6 +69,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_001051) do
     t.string "source_file"
     t.string "source_url"
     t.text "story"
+    t.string "story_source_name"
+    t.string "story_source_url"
     t.string "title"
     t.datetime "updated_at", null: false
     t.integer "weight", default: 1, null: false

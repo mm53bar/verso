@@ -51,6 +51,13 @@
             No story written for this one yet.
           </p>
         <% end %>
+
+        <%# Wikipedia prose is CC BY-SA; showing it means saying where it came
+            from. It also tells a reader whether they are reading an
+            encyclopaedia or something written here. %>
+        <% if @artwork.story.present? && @artwork.story_source_name.present? %>
+          <p class="mt-3 text-[15px] text-neutral-500">via <%= @artwork.story_source_name %></p>
+        <% end %>
       </div>
 
       <footer class="mt-4 shrink-0 border-t border-neutral-800 pt-3">

@@ -21,6 +21,14 @@
     <% end %>
     <% if @artwork.story.present? %>
       <div class="mt-4 space-y-3 text-sm leading-relaxed"><%= simple_format @artwork.story %></div>
+      <% if @artwork.story_source_url.present? %>
+        <p class="mt-2 text-xs text-neutral-500">
+          Story from
+          <%= link_to @artwork.story_source_name.presence || "source",
+              @artwork.story_source_url, class: "underline" %>,
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" class="underline">CC BY-SA</a>.
+        </p>
+      <% end %>
     <% end %>
 
     <dl class="mt-6 space-y-2 border-t pt-4 text-sm">
