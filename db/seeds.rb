@@ -20,6 +20,13 @@ collections = {
     description: "Chosen for the television, and natively 4K.",
     minimum_aspect_ratio: 1.30
   },
+  "Landscape and marine" => {
+    description: "Found by asking which painters worked WIDE, since that is what " \
+                 "survives a 16:9 window. Of 2571 paintings across thirteen artists, 82 " \
+                 "fit. Winslow Homer alone supplied 24 of them, because watercolour on " \
+                 "paper is habitually horizontal where stretched canvas is not.",
+    minimum_aspect_ratio: 1.60
+  },
   "Museums we have visited" => {
     description: "Chosen twice over: from the Louvre, the Rijksmuseum and the Van Gogh " \
                  "Museum, and only where the picture fits a 16:9 screen without being " \
