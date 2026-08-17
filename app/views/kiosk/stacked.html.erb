@@ -1,0 +1,130 @@
+<% content_for :title, @artwork&.display_title || @display.name %>
+
+<%#
+  Sized for a 854x534 CSS viewport read from a few feet away. Type is
+  deliberately larger than the browse UI: what is comfortable on a laptop is
+  unreadable across a kitchen.
+
+  ONE SCROLL, NOT THREE FIXED BANDS. The earlier layout pinned a header, a
+  button row and a details footer, and gave the story whatever was left. Measured
+  on the real page that was 336px of furniture against 134px of story in a 486px
+  column — 69% chrome — and a three-line title with a starred note cut the story
+  to 91px, under three lines, while it was trying to show 1660 characters.
+
+  So the whole column scrolls: the work, then the story, then the catalogue data
+  underneath, which is the order a wall label uses anyway. The story now starts
+  with the full column and the details scroll into view when someone wants them.
+
+  The controls moved onto the picture. Anywhere in this column, however slim,
+  takes the space back.
+%>
+<main class="relative flex h-screen w-screen overflow-hidden">
+  <% if @artwork.nil? %>
+    <div class="flex h-full w-full items-center justify-center px-10 text-center">
+      <p class="text-2xl text-neutral-400">
+        Nothing is showing on <%= @display.name %> yet.
+      </p>
+    </div>
+  <% else %>
+    <figure class="relative h-full w-[42%] shrink-0 bg-black">
+      <% if @artwork.original.attached? %>
+        <%= image_tag artwork_rendition_path(@artwork.slug, @display.slug,
+                                            format: @display.rendition_extension),
+              class: "h-full w-full object-cover", alt: @artwork.display_title %>
+      <% end %>
+
+      <%# Over the picture, where they cost the story nothing. Still a plain
+          same-origin form post: no CORS, no script — see SameOriginWrite for why
+          the Origin header rather than a CSRF token guards these. %>
+      <div class="absolute bottom-4 left-4 flex items-center gap-3">
+        <%= button_to advance_display_path(@display.slug),
+            aria: { label: "Next picture" },
+            class: "flex h-16 w-16 items-center justify-center rounded-full " \
+                   "bg-neutral-950/75 text-[26px] text-neutral-100 " \
+                   "ring-1 ring-white/25 active:bg-neutral-800" do %>
+          →
+        <% end %>
+
+        <%= button_to favourite_artwork_path(@artwork.slug),
+            aria: { label: @artwork.favourite? ? "Starred, tap to unstar" : "Star this" },
+            class: "flex h-16 w-16 items-center justify-center rounded-full text-[26px] " \
+                   "ring-1 active:opacity-70 #{@artwork.favourite? ?
+                     'bg-amber-500/25 text-amber-300 ring-amber-300/50' :
+                     'bg-neutral-950/75 text-neutral-300 ring-white/25'}" do %>
+          <%= @artwork.favourite? ? "★" : "☆" %>
+        <% end %>
+      </div>
+    </figure>
+
+    <%# The entire column scrolls as one. min-h-0 so it may actually shrink
+        inside the flex row rather than growing the page. %>
+    <div class="min-w-0 flex-1 overflow-y-auto px-8 py-6">
+      <h1 class="text-[34px] font-semibold leading-tight tracking-tight">
+        <%= @artwork.display_title %>
+      </h1>
+      <p class="mt-1 text-[22px] text-neutral-300">
+        <%= @artist&.name || "Artist unknown" %><%
+          %><% if @artwork.year_text.present? %><span class="text-neutral-500"> · <%= @artwork.year_text %></span><% end %>
+      </p>
+
+      <% if @artwork.favourite? %>
+        <p class="mt-2 text-[15px] text-amber-500/80">Starred, so it comes up twice as often.</p>
+      <% end %>
+
+      <div class="mt-4 text-[19px] leading-relaxed text-neutral-200">
+        <% if @artwork.story.present? %>
+          <%= simple_format @artwork.story, class: "mb-3" %>
+        <% elsif @artwork.blurb.present? %>
+          <p><%= @artwork.blurb %></p>
+        <% end %>
+
+        <% if @artist&.bio.present? %>
+          <p class="mt-3">
+            <span class="text-neutral-400"><%= @artist.name %><%= " (#{@artist.lifespan})" if @artist.lifespan %>.</span>
+            <%= @artist.bio %>
+          </p>
+        <% end %>
+
+        <% if @artwork.story.blank? && @artwork.blurb.blank? && @artist&.bio.blank? %>
+          <p class="text-neutral-500">
+            No story written for this one yet.
+          </p>
+        <% end %>
+
+        <%# Wikipedia prose is CC BY-SA; showing it means saying where it came
+            from. It also tells a reader whether they are reading an
+            encyclopaedia or something written here. %>
+        <% if @artwork.story.present? && @artwork.story_source_name.present? %>
+          <p class="mt-3 text-[15px] text-neutral-500">
+            <%= @artwork.story_source_name == "Wikipedia" ? "via Wikipedia" : "source: #{@artwork.story_source_name}" %>
+          </p>
+        <% end %>
+      </div>
+
+      <%# Underneath the story now, and scrolling with it. "Collection" is gone:
+          it names verso's own grouping, which is bookkeeping rather than
+          anything a person at a screen wants to read. %>
+      <footer class="mt-6 border-t border-neutral-800 pt-3 pb-2">
+        <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[17px]">
+          <% {
+               "Where" => @artwork.current_location,
+               "Medium" => @artwork.medium,
+               "Credit" => @artwork.credit_line
+             }.each do |label, value| %>
+            <% next if value.blank? %>
+            <dt class="text-neutral-500"><%= label %></dt>
+            <dd class="min-w-0 text-neutral-300"><%= value %></dd>
+          <% end %>
+        </dl>
+      </footer>
+    </div>
+  <% end %>
+
+  <%# Navigates the top frame, not this iframe — the dashboard view that frames
+      this page is a panel with no navbar, so this is the way back. %>
+  <% if @back %>
+    <a href="<%= @back %>" target="_top"
+       class="absolute right-4 top-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-neutral-900/80 text-3xl text-neutral-300"
+       aria-label="Back">×</a>
+  <% end %>
+</main>

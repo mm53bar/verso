@@ -12,6 +12,12 @@ class KioskController < ApplicationController
     @artwork = @display.current_artwork
     @artist  = @artwork&.artist
     @back    = safe_back_path
+
+    # Both screens frame the same URL, so a layout change lands on both at once.
+    # `?layout=stacked` lets one of them try the new one first while the other
+    # stays put — the kitchen screen is in use for cooking. Temporary: when the
+    # stacked layout becomes the default this parameter and the old template go.
+    render :stacked if params[:layout] == "stacked"
   end
 
   private
