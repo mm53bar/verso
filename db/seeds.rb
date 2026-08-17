@@ -20,6 +20,15 @@ collections = {
     description: "Chosen for the television, and natively 4K.",
     minimum_aspect_ratio: 1.30
   },
+  "Museums we have visited" => {
+    description: "Chosen twice over: from the Louvre, the Rijksmuseum and the Van Gogh " \
+                 "Museum, and only where the picture fits a 16:9 screen without being " \
+                 "cropped to pieces. In practice that means Dutch and Flemish landscape, " \
+                 "because that is the work that was painted wide.",
+    # The sourcing floor, recorded rather than enforced: candidates were taken from
+    # the television's own window, 1.6 to 1.975.
+    minimum_aspect_ratio: 1.60
+  },
   "Cartoons" => {
     description: "Film, strip and book wallpapers. Weighted up so a small group " \
                  "is not diluted by a large one.",
