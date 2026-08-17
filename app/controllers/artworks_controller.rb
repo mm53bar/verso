@@ -1,4 +1,6 @@
 class ArtworksController < ApplicationController
+  include SameOriginWrite
+
   # 154 thumbnails on one page is roughly 8MB and 154 requests. Paged by hand
   # rather than with a gem: it is a limit, an offset and two links.
   PER_PAGE = 48

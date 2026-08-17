@@ -1,4 +1,6 @@
 class DisplaysController < ApplicationController
+  include SameOriginWrite
+
   def index
     @displays = Display.includes(:current_artwork, :collections).order(:name)
   end

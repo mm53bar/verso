@@ -14,7 +14,7 @@ class ScreenControlTest < ActionDispatch::IntegrationTest
   end
 
   test "showing an artwork puts it on the leader and every follower" do
-    post show_artwork_on_display_path(@kiosk.slug, @artwork.slug)
+    post show_artwork_on_display_path(@kiosk.slug, @artwork.slug), headers: BROWSER
 
     assert_redirected_to artwork_path(@artwork)
     assert_equal @artwork, @kiosk.reload.current_artwork
@@ -24,7 +24,7 @@ class ScreenControlTest < ActionDispatch::IntegrationTest
 
   test "showing an artwork records it, so the history stays true" do
     assert_difference -> { @kiosk.display_events.count }, 1 do
-      post show_artwork_on_display_path(@kiosk.slug, @artwork.slug)
+      post show_artwork_on_display_path(@kiosk.slug, @artwork.slug), headers: BROWSER
     end
   end
 
@@ -35,7 +35,7 @@ class ScreenControlTest < ActionDispatch::IntegrationTest
     assert_not_includes @kiosk.eligible_artworks, sketch,
       "sanity: outside the television's window, so the rotation cannot choose it"
 
-    post show_artwork_on_display_path(@kiosk.slug, sketch.slug)
+    post show_artwork_on_display_path(@kiosk.slug, sketch.slug), headers: BROWSER
 
     assert_equal sketch, @kiosk.reload.current_artwork,
       "the aspect rule stops the rotation choosing badly; it does not overrule a person"
@@ -44,24 +44,24 @@ class ScreenControlTest < ActionDispatch::IntegrationTest
   test "advancing moves the rotation on" do
     was = @kiosk.current_artwork
 
-    post advance_display_path(@kiosk.slug)
+    post advance_display_path(@kiosk.slug), headers: BROWSER
 
     assert_response :redirect
     assert_not_equal was, @kiosk.reload.current_artwork
   end
 
   test "the write routes send no cross-origin header" do
-    post advance_display_path(@kiosk.slug)
+    post advance_display_path(@kiosk.slug), headers: BROWSER
 
     assert_nil response.headers["Access-Control-Allow-Origin"],
       "a write must not be reachable by script from another origin"
   end
 
   test "an unknown display or artwork is a 404" do
-    post advance_display_path("no-such-screen")
+    post advance_display_path("no-such-screen"), headers: BROWSER
     assert_response :not_found
 
-    post show_artwork_on_display_path(@kiosk.slug, "no-such-artwork")
+    post show_artwork_on_display_path(@kiosk.slug, "no-such-artwork"), headers: BROWSER
     assert_response :not_found
   end
 end
