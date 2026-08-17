@@ -20,9 +20,20 @@ class Artwork < ApplicationRecord
   # Display renditions cannot be named variants — their sizes come from Display
   # rows at runtime, and named variants have to be declared statically. Those
   # are pre-generated explicitly instead; see #warm_derivatives!.
+  # EVERY size the app displays is named here, and nowhere else.
+  #
+  # An inline `variant(resize_to_limit: ...)` in a view is a variant nothing
+  # warms, because the warmer cannot know about it. That is not hypothetical:
+  # naming only the thumbnail left the artwork detail page deriving a 1400px
+  # image from a 23MB original on demand, which is tens of seconds on the NAS.
+  # If a view needs a new size, it gets a name here.
   has_one_attached :original do |attachable|
-    attachable.variant :thumb, resize_to_fill: [ 480, 300 ], format: :jpeg,
+    attachable.variant :thumb,  resize_to_fill: [ 480, 300 ], format: :jpeg,
                        saver: { quality: 80 }, preprocessed: true
+    attachable.variant :tile,   resize_to_fill: [ 160, 100 ], format: :jpeg,
+                       saver: { quality: 80 }, preprocessed: true
+    attachable.variant :detail, resize_to_limit: [ 1400, 1400 ], format: :jpeg,
+                       saver: { quality: 85 }, preprocessed: true
   end
 
   validates :weight, numericality: { greater_than: 0 }
@@ -47,9 +58,9 @@ class Artwork < ApplicationRecord
     title.presence || "Untitled"
   end
 
-  def thumbnail
-    original.variant(:thumb)
-  end
+  def thumbnail = original.variant(:thumb)
+  def tile       = original.variant(:tile)
+  def detail     = original.variant(:detail)
 
   # Generate what Active Storage will not generate for us.
   #
@@ -60,9 +71,9 @@ class Artwork < ApplicationRecord
   def warm_derivatives!
     return 0 unless original.attached?
 
-    thumbnail.processed
+    [ thumbnail, tile, detail ].each(&:processed)
     Display.active.each { |display| rendition_for(display).processed }
-    1 + Display.active.count
+    3 + Display.active.count
   end
 
   # A JPEG fitted to this display — cropped to fill, or scaled and matted,

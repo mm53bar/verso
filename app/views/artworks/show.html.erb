@@ -5,8 +5,7 @@
 <article class="grid gap-8 lg:grid-cols-[3fr_2fr]">
   <div>
     <% if @artwork.original.attached? %>
-      <%= image_tag @artwork.original.variant(resize_to_limit: [ 1400, 1400 ], format: :jpeg),
-          class: "w-full rounded" %>
+      <%= image_tag @artwork.detail, class: "w-full rounded" %>
     <% end %>
   </div>
 

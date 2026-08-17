@@ -43,6 +43,29 @@ class WarmDerivativesJobTest < ActiveSupport::TestCase
     assert_operator WarmDerivativesJob.perform_now, :>, 0
   end
 
+  test "no view derives an image size of its own" do
+    # An inline variant in a view is a size the warmer cannot know about, so it
+    # is generated on demand — tens of seconds from a 23MB original on the NAS.
+    # Naming every size in the model is what makes warming complete rather than
+    # merely well-intentioned. This caught the artwork detail page asking for
+    # resize_to_limit [1400, 1400] that nothing ever pre-generated.
+    offenders = Dir[Rails.root.join("app/views/**/*.erb")].select do |path|
+      File.read(path).match?(/\.variant\(\s*(resize_|format:|:?\{)/)
+    end
+
+    assert_empty offenders.map { |p| p.sub("#{Rails.root}/", "") },
+      "these views build a variant inline; add a named variant to Artwork instead"
+  end
+
+  test "every named variant is warmed" do
+    named = Artwork.reflect_on_attachment(:original).named_variants.keys.sort
+
+    assert_equal %i[ detail thumb tile ], named
+    named.each do |name|
+      assert_respond_to artworks(:native_4k), name == :thumb ? :thumbnail : name
+    end
+  end
+
   test "the thumbnail is a named variant, so view and warmer cannot drift apart" do
     # Naming it is what guarantees they ask for the identical transformation. An
     # inline hash in the view and another in the warmer would be two cache keys
