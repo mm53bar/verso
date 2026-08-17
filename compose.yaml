@@ -53,6 +53,17 @@ services:
       # out at deploy time.
       HTTP_PORT: 8080
 
+      # A browse page is ~50 small images, each a separate request through the
+      # Active Storage proxy. Rails' default of 3 threads serialises them into
+      # ~17 rounds. Reads are what this app mostly does and SQLite in WAL mode
+      # handles concurrent readers, so the threads are close to free.
+      RAILS_MAX_THREADS: 8
+
+      # libvips grabs every core for a single image by default. On a 4-core NAS
+      # that lets one variant generation starve the web server — which is
+      # exactly what a backfill did. Leave headroom for serving.
+      VIPS_CONCURRENCY: 2
+
       # Rails session/cookie signing key (required). Generate with: openssl rand -hex 64
       SECRET_KEY_BASE: replace-with-64-byte-hex
 

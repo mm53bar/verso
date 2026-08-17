@@ -54,6 +54,15 @@ namespace :verso do
 end
 
 namespace :verso do
+  # Run this politely. It is maintenance, and it must never make the app worse
+  # than not running it at all:
+  #
+  #   docker exec verso-verso-1 nice -n 19 bin/rails verso:warm
+  #
+  # Without the nice, a backfill saturates every core and a browse page that
+  # normally takes 1.6s took over two minutes. VIPS_CONCURRENCY in compose caps
+  # how much of the machine one image can claim; the nice decides who loses when
+  # they compete.
   desc "Pre-generate every thumbnail and display rendition: bin/rails verso:warm"
   task warm: :environment do
     total = Artwork.count
