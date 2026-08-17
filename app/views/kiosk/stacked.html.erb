@@ -41,16 +41,23 @@
             page, a bigger view, or nothing. The word carries it, and "Next" is
             the same word the browse UI uses for the same action. The star needs
             no label -- a star means one thing. %>
-        <%# The arrow is part of the same text run rather than a second flex item.
-            As a separate item with leading-none it was a 26px box beside a 33px
-            one, and items-center centred the boxes, not the glyphs, which sat the
-            arrow low. Inline text shares a baseline for free. %>
+        <%# A drawn arrow rather than the → character. Sharing a baseline was not
+            enough: the glyph is drawn on the font's maths axis, about a quarter of
+            an em above the baseline, where the optical centre of a word is nearer
+            a third — so it reads low however the box is centred, and that is a
+            font metric no layout can correct. An SVG sits exactly where it is
+            told. align-middle puts its centre on the baseline plus half the
+            x-height, which is where the eye expects it. %>
         <%= button_to advance_display_path(@display.slug),
             aria: { label: "Next picture" },
             class: "flex h-16 items-center justify-center rounded-full px-6 " \
                    "bg-neutral-950/75 text-[22px] text-neutral-100 " \
                    "ring-1 ring-white/25 active:bg-neutral-800" do %>
-          Next&nbsp;→
+          <span>Next<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true"
+                         class="ml-2 inline-block h-[0.85em] w-[0.85em] align-middle"
+                    ><path d="M4 12h13M12.5 6.5 18 12l-5.5 5.5"/></svg></span>
         <% end %>
 
         <%= button_to favourite_artwork_path(@artwork.slug),
