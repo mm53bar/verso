@@ -29,6 +29,10 @@ class Display < ApplicationRecord
   validates :width, :height, :cycle_seconds, numericality: { greater_than: 0 }
   validates :delivery, inclusion: { in: DELIVERIES }
   validates :render_mode, inclusion: { in: RENDER_MODES }
+  # A quarter of the height per side would leave half the panel as mount board,
+  # which is past a matte and into a joke.
+  validates :matte_inset,
+            numericality: { greater_than_or_equal_to: 0, less_than: 0.25 }
   validate :cannot_follow_itself
   validates :file_path, presence: true, if: :file_delivery?
   validates :max_crop_fraction,
@@ -196,15 +200,38 @@ class Display < ApplicationRecord
   # How this panel wants an artwork transformed.
   #
   # `contain` pads rather than crops, so the whole picture survives and the
-  # remainder is matte. `resize_and_pad` centres by default, which is what a
-  # mounted picture looks like.
+  # remainder is matte.
+  #
+  # With an inset, that is done in two steps rather than one, and the reason is
+  # what a matte actually looks like. `resize_and_pad` alone fits the artwork to
+  # the panel, so a picture narrower than the screen meets the top and bottom
+  # edges exactly and the matte can only appear down the sides. That is
+  # letterboxing. Shrinking the artwork into a smaller box first and then
+  # centring it on the full panel leaves a margin on all four sides, which is a
+  # mount board.
   def variant_transformation
-    if contain?
-      { resize_and_pad: [ width, height, { background: matte_rgb, alpha: false } ],
-        format: :jpeg, saver: { quality: 90 } }
-    else
-      { resize_to_fill: [ width, height ], format: :jpeg, saver: { quality: 88 } }
+    unless contain?
+      return { resize_to_fill: [ width, height ], format: :jpeg, saver: { quality: 88 } }
     end
+
+    return { resize_and_pad: [ width, height, { background: matte_rgb, alpha: false } ],
+             format: :jpeg, saver: { quality: 90 } } if matte_inset.to_f.zero?
+
+    { resize_to_limit: matte_inner_size,
+      gravity: [ "centre", width, height,
+                 { extend: :background, background: matte_rgb } ],
+      format: :jpeg, saver: { quality: 90 } }
+  end
+
+  # The box the artwork is scaled into, leaving the inset as a margin.
+  #
+  # Measured off the height on both axes on purpose: an equal *fraction* of each
+  # axis would give a wide screen a wider side margin than top margin, and a
+  # mount board has an even border.
+  def matte_inner_size
+    margin = (height * matte_inset.to_f).round
+
+    [ width - margin * 2, height - margin * 2 ]
   end
 
   # The extension a rendition URL for this display should carry.

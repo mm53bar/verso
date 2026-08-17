@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_170215) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_180749) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -138,6 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_170215) do
     t.integer "follows_display_id"
     t.integer "height", null: false
     t.string "matte_color", default: "#111111", null: false
+    t.decimal "matte_inset", precision: 4, scale: 3, default: "0.0", null: false
     t.decimal "max_crop_fraction", precision: 4, scale: 3, default: "0.25", null: false
     t.string "name", null: false
     t.integer "next_artwork_id"
