@@ -9,8 +9,21 @@ class Artwork < ApplicationRecord
 
   # The original at full resolution. Every display-sized image is derived from
   # it — see docs/adr/20260816-active-storage-with-round-trippable-export.md.
-  # There are no named variants because display sizes are rows, not constants.
-  has_one_attached :original
+  #
+  # The browse thumbnail is a named variant with `preprocessed: true`, so Active
+  # Storage generates it in the background when the original is attached rather
+  # than when someone first loads the page. Variants are lazy by default, which
+  # is fine for small originals and not fine for these: measured on the NAS, a
+  # cold 480x300 from a 717MB source takes 42 seconds against 32ms once cached,
+  # and Puma has three threads to lose to it.
+  #
+  # Display renditions cannot be named variants — their sizes come from Display
+  # rows at runtime, and named variants have to be declared statically. Those
+  # are pre-generated explicitly instead; see #warm_derivatives!.
+  has_one_attached :original do |attachable|
+    attachable.variant :thumb, resize_to_fill: [ 480, 300 ], format: :jpeg,
+                       saver: { quality: 80 }, preprocessed: true
+  end
 
   validates :weight, numericality: { greater_than: 0 }
 
@@ -34,20 +47,16 @@ class Artwork < ApplicationRecord
     title.presence || "Untitled"
   end
 
-  # The browse UI's thumbnail. Defined once, here, because the view and the
-  # warmer have to ask for the *identical* transformation — a variant differing
-  # by so much as its quality setting is a different cache entry, so a mismatch
-  # would silently pre-generate images nobody ever requests.
-  THUMBNAIL = { resize_to_fill: [ 480, 300 ], format: :jpeg, saver: { quality: 80 } }.freeze
-
   def thumbnail
-    original.variant(**THUMBNAIL)
+    original.variant(:thumb)
   end
 
-  # Every derivative this artwork needs: the browse thumbnail plus one rendition
-  # per active display. Deriving these on demand is what made the index
-  # unusable — a 480x300 thumbnail from a 717MB original takes 42 seconds on the
-  # NAS, and there are only three Puma threads to spend.
+  # Generate what Active Storage will not generate for us.
+  #
+  # The named thumbnail looks after itself on attach. Display renditions are
+  # sized from Display rows, so they cannot be declared as named variants and
+  # have to be asked for. This also backfills artworks attached before the
+  # thumbnail became preprocessed.
   def warm_derivatives!
     return 0 unless original.attached?
 

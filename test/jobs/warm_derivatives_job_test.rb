@@ -4,6 +4,8 @@ require "test_helper"
 # the NAS, a 480x300 thumbnail from a 717MB original takes 42 seconds, and Puma
 # has three threads to spend.
 class WarmDerivativesJobTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
     @artwork = artworks(:native_4k)
     @artwork.original.attach(
@@ -41,10 +43,25 @@ class WarmDerivativesJobTest < ActiveSupport::TestCase
     assert_operator WarmDerivativesJob.perform_now, :>, 0
   end
 
-  test "the view and the warmer agree on the transformation" do
-    # If these drift, the warmer caches images nobody requests and the index
-    # stays slow while looking like it was fixed.
-    assert_equal Artwork::THUMBNAIL, { resize_to_fill: [ 480, 300 ], format: :jpeg, saver: { quality: 80 } }
+  test "the thumbnail is a named variant, so view and warmer cannot drift apart" do
+    # Naming it is what guarantees they ask for the identical transformation. An
+    # inline hash in the view and another in the warmer would be two cache keys
+    # that look the same, and the index would stay slow while appearing fixed.
+    assert_includes Artwork.reflect_on_attachment(:original).named_variants.keys, :thumb
     assert_includes File.read(Rails.root.join("app/views/artworks/index.html.erb")), "artwork.thumbnail"
+  end
+
+  test "attaching an original preprocesses the thumbnail without being asked" do
+    fresh = Artwork.create!(title: "Freshly attached", collection: collections(:canon))
+
+    perform_enqueued_jobs do
+      fresh.original.attach(
+        io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg"
+      )
+    end
+
+    digest = fresh.thumbnail.variation.digest
+    assert ActiveStorage::VariantRecord.exists?(blob: fresh.original.blob, variation_digest: digest),
+      "preprocessed: true should have generated this on attach"
   end
 end

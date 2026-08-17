@@ -63,9 +63,10 @@ class ArtworkImporter
     artwork.original.attach(io: bytes, filename: filename, content_type: @attributes[:content_type])
     artwork.record_dimensions!
 
-    # Derive the thumbnail and each display's rendition now, in the background,
-    # rather than making whoever opens the page next pay for it. On the NAS that
-    # bill is tens of seconds per image.
+    # Active Storage preprocesses the named thumbnail on attach by itself. The
+    # display renditions it cannot: their sizes come from Display rows, so they
+    # are not declarable as named variants. Generate them now, in the
+    # background, rather than making a screen wait at swap time.
     WarmDerivativesJob.perform_later(artwork.id)
 
     Result.new(artwork, nil)

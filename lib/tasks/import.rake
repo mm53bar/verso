@@ -68,3 +68,38 @@ namespace :verso do
     puts "warmed #{done} derivatives"
   end
 end
+
+namespace :verso do
+  desc "Fill in what Wikidata knows — where a work hangs, its medium, its date"
+  task enrich: :environment do
+    scope = Artwork.where.not(wikidata_qid: [ nil, "" ])
+    puts "looking up #{scope.count} artworks with a Wikidata id"
+
+    facts = WikidataLookup.facts_for(scope.pluck(:wikidata_qid))
+    puts "  Wikidata answered for #{facts.size}"
+
+    filled = Hash.new(0)
+    scope.find_each do |artwork|
+      known = facts[artwork.wikidata_qid]
+      next if known.nil?
+
+      # Only fill blanks. Anything already recorded was set deliberately, and a
+      # bulk job should not quietly overwrite a human's correction. FORCE=1
+      # re-derives the fields this task owns, for when the derivation improves.
+      artwork.update!(current_location: nil, medium: nil) if ENV["FORCE"].present?
+      updates = {}
+      updates[:current_location] = known.housed_at if artwork.current_location.blank? && known.housed_at.present?
+      updates[:medium]           = known.medium    if artwork.medium.blank? && known.medium.present?
+      updates[:year_text]        = known.year      if artwork.year_text.blank? && known.year.present?
+      updates[:source_url]       = known.article   if artwork.source_url.blank? && known.article.present?
+      next if updates.empty?
+
+      artwork.update!(updates)
+      updates.each_key { |field| filled[field] += 1 }
+    end
+
+    filled.each { |field, n| puts "  filled #{field}: #{n}" }
+    puts "  artworks now knowing where they hang: " \
+         "#{Artwork.where.not(current_location: [ nil, '' ]).count} of #{Artwork.count}"
+  end
+end
