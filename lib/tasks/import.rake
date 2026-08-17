@@ -146,3 +146,40 @@ namespace :verso do
     puts "  artworks with a story: #{Artwork.where.not(story: [ nil, '' ]).count} of #{Artwork.count}"
   end
 end
+
+namespace :verso do
+  desc "What the catalogue is missing, per collection"
+  task coverage: :environment do
+    scope = Artwork.where(active: true, reviewed: true)
+
+    puts "#{scope.count} artworks can reach a screen. Of those:"
+    {
+      "blurb (spoken)" => :blurb,
+      "story (read)" => :story,
+      "title" => :title,
+      "year" => :year_text,
+      "where it hangs" => :current_location
+    }.each do |label, column|
+      have = scope.where.not(column => [ nil, "" ]).count
+      puts format("  %-16s %3d of %3d", label, have, scope.count)
+    end
+
+    # A blurb is what a voice assistant reads out, so a missing one is not a
+    # thinner answer, it is no answer at all when that artwork happens to be up.
+    missing = scope.where(blurb: [ nil, "" ]).order(:title)
+    if missing.any?
+      puts "\nno blurb, so voice has nothing to say when these are showing:"
+      missing.each { |a| puts "  #{a.slug}" }
+    end
+
+    # These read badly aloud. Piper says punctuation it cannot interpret, and HA
+    # cannot pace a long passage, so both are caught here rather than by ear.
+    unspeakable = scope.where.not(blurb: [ nil, "" ]).select do |a|
+      a.blurb.match?(/[–—×]|\bc\.\s*\d/) || a.blurb.length > 320
+    end
+    if unspeakable.any?
+      puts "\nblurbs that will not survive being spoken:"
+      unspeakable.each { |a| puts "  #{a.slug}: #{a.blurb[0, 60]}" }
+    end
+  end
+end
