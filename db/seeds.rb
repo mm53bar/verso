@@ -84,11 +84,20 @@ television.update!(
   name: "Television", width: 3840, height: 2160,
   cycle_seconds: 1.hour.to_i,
   # Crops, and its aspect window is what decides the whole collection, because
-  # the kiosk may only pick what this screen can also render. 0.10 is at most a
-  # tenth of the picture discarded, so 5% off each edge. Matting was tried first
-  # and looked wrong on the wall; see
-  # docs/adr/20260817-fit-the-screen-not-the-art.md.
-  render_mode: "fill", max_crop_fraction: 0.10,
+  # the kiosk may only pick what this screen can also render. 0.20 is at most a
+  # fifth of the picture discarded, so 10% off each edge.
+  #
+  # It was 0.10 for a few hours. 0.20 was rejected earlier on the strength of a
+  # MATTE at that tolerance, which is a different judgement: a fifth of the panel
+  # given over to mount board looks like a small picture adrift, where a fifth
+  # cropped off a large painting reads as a tighter frame. Judged on The Potato
+  # Eaters at 1.414, the worst case this window admits.
+  #
+  # This is the single most valuable number in the app. Widening it from 0.10
+  # returned 26 famous paintings already in the collection -- Nighthawks,
+  # Primavera, Ophelia, the Grande Jatte -- and four Group of Seven works, at no
+  # cost but a warm pass. See docs/adr/20260817-fit-the-screen-not-the-art.md.
+  render_mode: "fill", max_crop_fraction: 0.20,
   # http, not file. This was a file drop for one day, because the uploader was a
   # cron script that had to read the rendition from somewhere. The upload now
   # lives in a Home Assistant integration, which fetches current.json and then

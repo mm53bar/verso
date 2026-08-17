@@ -1,5 +1,16 @@
 # 20260817 — Fit the screen, not the art
 
+> **Amended the same day: the window is 0.20, not 0.10.** The decision below
+> stands — the television crops and its aspect window governs the shared
+> rotation — but the number moved once cropping had been seen on the wall. 0.20
+> had been rejected earlier on the strength of a *matte* at that tolerance, which
+> is a different judgement: a fifth of the panel given to mount board looks like a
+> small picture adrift, where a fifth cropped off a large painting reads as a
+> tighter frame. Judged on *The Potato Eaters* at 1.414, the worst case the window
+> admits, and accepted. The effect was 26 famous paintings already in the
+> collection returning to rotation, plus four Group of Seven works, for the cost
+> of a warm pass. The consequences section below describes the 0.10 world.
+
 Supersedes the matting half of [20260817 — One rotation across screens, and
 matting instead of cropping](20260817-one-rotation-two-shapes.md). The one
 rotation stands; the matting does not.
