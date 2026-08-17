@@ -116,7 +116,6 @@ class ArtworkExporter
         name: collection.name,
         slug: collection.slug,
         description: collection.description,
-        weight: collection.weight,
         minimum_aspect_ratio: collection.minimum_aspect_ratio&.to_s,
         max_upscale: collection.max_upscale.to_s
       }

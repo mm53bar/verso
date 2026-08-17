@@ -135,8 +135,8 @@ class ExportRoundTripTest < ActiveSupport::TestCase
     # Returns slug => the fields that must survive, so the assertion loop reads
     # as a specification rather than a pile of asserts.
     def seed_collection
-      canon = Collection.create!(name: "Wikimedia canon", weight: 1, minimum_aspect_ratio: 1.3)
-      canadian = Collection.create!(name: "Canadian", weight: 2, minimum_aspect_ratio: 1.235)
+      canon = Collection.create!(name: "Wikimedia canon", minimum_aspect_ratio: 1.3)
+      canadian = Collection.create!(name: "Canadian", minimum_aspect_ratio: 1.235)
 
       thomson = Artist.create!(name: "Tom Thomson", birth_year: 1877, death_year: 1917,
                                nationality: "Canadian", bio: "Painted the Ontario near north.")

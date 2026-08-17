@@ -9,11 +9,13 @@ class Collection < ApplicationRecord
   has_many :displays, through: :display_collections
 
   validates :name, presence: true
-  validates :weight, numericality: { greater_than: 0 }
-  # Note the difference between these two, because the names invite confusion:
-  # minimum_aspect_ratio records how this collection was *sourced* and nothing
-  # reads it at display time, while max_upscale is consulted on every rotation —
-  # Display#large_enough divides its panel by it.
+  # These two look alike and are not. max_upscale is consulted on every rotation
+  # — Display#large_enough divides its panel by it. minimum_aspect_ratio is
+  # *provenance*: it records the floor a collection was sourced against, which is
+  # why the Canadian collection holds 1.235 sketch panels where the European one
+  # is floored at 1.30. Nothing enforces it, deliberately — suitability is
+  # computed per display, and a second aspect gate here would refuse pieces a
+  # screen could happily show.
   validates :minimum_aspect_ratio,
             numericality: { greater_than: 0 }, allow_nil: true
   # Below 1 would demand a piece be larger than the panel, which is not a floor

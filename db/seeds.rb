@@ -7,26 +7,22 @@
 collections = {
   "Wikimedia canon" => {
     description: "Paintings ranked by how many language Wikipedias carry them.",
-    weight: 1,
     minimum_aspect_ratio: 1.30
   },
   "Canadian — Group of Seven and circle" => {
     description: "Enumerated from Commons categories. Ranking by Wikidata sitelinks " \
                  "finds almost no Canadian art, so the canon method does not work here.",
-    weight: 1,
     # A standard sketch panel is 8.5x10.5in. A 1.30 floor would discard most of
     # this body of work, which is why the floor belongs to the collection.
     minimum_aspect_ratio: 1.235
   },
   "Samsung Frame collection" => {
     description: "Chosen for the television, and natively 4K.",
-    weight: 1,
     minimum_aspect_ratio: 1.30
   },
   "Cartoons" => {
     description: "Film, strip and book wallpapers. Weighted up so a small group " \
                  "is not diluted by a large one.",
-    weight: 3,
     minimum_aspect_ratio: 1.30,
     # The only collection allowed to be enlarged, and the reason is the material.
     # Cel and watercolour art is flat colour bounded by line, so 2x invents
@@ -86,14 +82,29 @@ television.update!(
 # followers can also render, what actually reaches a screen is decided by
 # whether the picture is big enough — not by curation lists pulling in two
 # directions.
+
+# How often a collection comes up, per screen. This is the ONLY weight that acts
+# on a collection: Display#weight_for multiplies an artwork's own weight by the
+# one on this join, and nothing reads a weight from the collection itself.
+#
+# Cartoons at 2 gives them about 13% of a round, one showing in seven or eight,
+# which is the cadence they had before a hundred paintings arrived and diluted
+# them to one in nineteen. It was 1 for a day, correctly: only two cartoons were
+# large enough for the 4K panel then, and boosting a collection of two does not
+# add variety, it just shows the same two pictures more often. Nine of them now
+# clear the panel, so the reason expired.
+#
+# **The count is what governs this.** Revisit the number when the number of
+# active cartoons changes materially, not on taste.
+COLLECTION_WEIGHTS = { "Cartoons" => 2 }.freeze
+
 [ kiosk, television ].each do |display|
-  collections.each_value do |collection|
+  collections.each do |name, collection|
     pairing = DisplayCollection.find_or_initialize_by(display: display, collection: collection)
-    # Weight only means anything on the leader; a follower is told what to show.
-    # Cartoons are no longer boosted: the count that made boosting necessary has
-    # dropped to the handful that are large enough for the 4K panel, and they
-    # now appear in the living room as well as the kitchen.
-    pairing.update!(weight: 1)
+    # Set on both screens, though only the leader's is consulted — a follower is
+    # told what to show. If the television ever led, it should not silently
+    # change what comes up.
+    pairing.update!(weight: COLLECTION_WEIGHTS.fetch(name, 1))
   end
 end
 

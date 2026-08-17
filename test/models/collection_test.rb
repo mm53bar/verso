@@ -23,8 +23,4 @@ class CollectionTest < ActiveSupport::TestCase
     assert_predicate Collection.new(name: "No floor"), :valid?
     assert_not Collection.new(name: "Bad floor", minimum_aspect_ratio: 0).valid?
   end
-
-  test "weight must be positive" do
-    assert_not Collection.new(name: "Zero", weight: 0).valid?
-  end
 end

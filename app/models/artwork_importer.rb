@@ -109,7 +109,7 @@ class ArtworkImporter
       return if name.blank?
 
       Collection.find_or_create_by!(name: name) do |collection|
-        collection.assign_attributes(attributes.slice("description", "weight", "minimum_aspect_ratio", "max_upscale"))
+        collection.assign_attributes(attributes.slice("description", "minimum_aspect_ratio", "max_upscale"))
       end
     end
 
