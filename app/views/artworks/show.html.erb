@@ -20,12 +20,22 @@
     <% end %>
     <% if @artwork.story.present? %>
       <div class="mt-4 space-y-3 text-sm leading-relaxed"><%= simple_format @artwork.story %></div>
+      <%# Two different things, and conflating them states a falsehood about the
+          licence. Wikipedia prose is quoted verbatim and is CC BY-SA, so it must
+          say so. A story written here from a gallery's page is a citation, not a
+          licensed excerpt, and claiming CC BY-SA over someone else's research
+          would be wrong. %>
       <% if @artwork.story_source_url.present? %>
         <p class="mt-2 text-xs text-neutral-500">
-          Story from
-          <%= link_to @artwork.story_source_name.presence || "source",
-              @artwork.story_source_url, class: "underline" %>,
-          <a href="https://creativecommons.org/licenses/by-sa/4.0/" class="underline">CC BY-SA</a>.
+          <% if @artwork.story_source_name == "Wikipedia" %>
+            Story from
+            <%= link_to "Wikipedia", @artwork.story_source_url, class: "underline" %>,
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/" class="underline">CC BY-SA</a>.
+          <% else %>
+            Written for verso. Source:
+            <%= link_to @artwork.story_source_name.presence || "link",
+                @artwork.story_source_url, class: "underline" %>.
+          <% end %>
         </p>
       <% end %>
     <% end %>
