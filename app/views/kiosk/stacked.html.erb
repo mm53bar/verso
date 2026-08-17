@@ -37,12 +37,16 @@
           same-origin form post: no CORS, no script — see SameOriginWrite for why
           the Origin header rather than a CSRF token guards these. %>
       <div class="absolute bottom-4 left-4 flex items-center gap-3">
+        <%# A bare arrow was not obvious: an arrow on a picture could mean the next
+            page, a bigger view, or nothing. The word carries it, and "Next" is
+            the same word the browse UI uses for the same action. The star needs
+            no label -- a star means one thing. %>
         <%= button_to advance_display_path(@display.slug),
             aria: { label: "Next picture" },
-            class: "flex h-16 w-16 items-center justify-center rounded-full " \
-                   "bg-neutral-950/75 text-[26px] text-neutral-100 " \
+            class: "flex h-16 items-center justify-center gap-2 rounded-full px-6 " \
+                   "bg-neutral-950/75 text-[22px] text-neutral-100 " \
                    "ring-1 ring-white/25 active:bg-neutral-800" do %>
-          →
+          Next <span class="text-[26px] leading-none">→</span>
         <% end %>
 
         <%= button_to favourite_artwork_path(@artwork.slug),

@@ -109,6 +109,8 @@ class KioskControllerTest < ActionDispatch::IntegrationTest
     get kiosk_url(@kiosk.slug, layout: "stacked")
 
     assert_select "figure form[action=?]", advance_display_path(@kiosk.slug)
+    assert_select "figure button", { text: /Next/ },
+      "a bare arrow on a picture could mean anything; the word carries it"
     assert_select "figure form[action=?]", favourite_artwork_path(@artwork.slug)
   end
 
