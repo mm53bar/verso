@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_16_170737) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_001051) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -133,15 +133,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_170737) do
     t.integer "cycle_seconds", null: false
     t.string "delivery", default: "http", null: false
     t.string "file_path"
+    t.integer "follows_display_id"
     t.integer "height", null: false
+    t.string "matte_color", default: "#111111", null: false
     t.decimal "max_crop_fraction", precision: 4, scale: 3, default: "0.25", null: false
     t.string "name", null: false
     t.integer "next_artwork_id"
+    t.string "render_mode", default: "fill", null: false
     t.datetime "round_started_at"
     t.string "slug", null: false
     t.datetime "updated_at", null: false
     t.integer "width", null: false
     t.index ["current_artwork_id"], name: "index_displays_on_current_artwork_id"
+    t.index ["follows_display_id"], name: "index_displays_on_follows_display_id"
     t.index ["next_artwork_id"], name: "index_displays_on_next_artwork_id"
     t.index ["slug"], name: "index_displays_on_slug", unique: true
   end
@@ -158,4 +162,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_16_170737) do
   add_foreign_key "display_overrides", "displays"
   add_foreign_key "displays", "artworks", column: "current_artwork_id"
   add_foreign_key "displays", "artworks", column: "next_artwork_id"
+  add_foreign_key "displays", "displays", column: "follows_display_id"
 end

@@ -34,20 +34,18 @@ class Artwork < ApplicationRecord
     title.presence || "Untitled"
   end
 
-  # A JPEG cropped to fill this display exactly. Generated on demand and cached
-  # by Active Storage; the URL a client sees must not embed the variant key, or
+  # A JPEG fitted to this display — cropped to fill, or scaled and matted,
+  # depending on what that screen is for. Generated on demand and cached by
+  # Active Storage; the URL a client sees must not embed the variant key, or
   # regenerating it would make a screen swap for no reason.
   def rendition_for(display)
-    original.variant(
-      resize_to_fill: [ display.width, display.height ],
-      format: :jpeg,
-      saver: { quality: 88 }
-    )
+    original.variant(**display.variant_transformation)
   end
 
-  # True when this piece can fill the display without being upscaled. Cropping
+  # True when this piece can *fill* the display without being upscaled. Cropping
   # to fill scales by max(target_w/w, target_h/h), so covering the target
-  # without enlarging means being at least as large in both dimensions.
+  # without enlarging means being at least as large in both dimensions. A
+  # matting display has a laxer test — see Display#large_enough.
   def fills?(display)
     return false if width.blank? || height.blank?
 

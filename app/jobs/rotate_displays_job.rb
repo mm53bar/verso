@@ -24,6 +24,15 @@ class RotateDisplaysJob < ApplicationJob
 
       display.deliver!
       display.warm_next_rendition
+
+      # Followers were moved in the same transaction; they still have to be
+      # delivered, at their own size and in their own render mode.
+      display.followers.each do |follower|
+        follower.deliver!
+        follower.warm_next_rendition
+        advanced << follower.slug
+      end
+
       advanced << display.slug
       Rails.logger.info("[verso] #{display.slug}: now showing #{artwork.slug}")
     end

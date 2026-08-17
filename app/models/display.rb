@@ -7,8 +7,18 @@ class Display < ApplicationRecord
   # docs/adr/20260816-verso-owns-the-rotation.md.
   DELIVERIES = %w[ http file ].freeze
 
+  # How an artwork is fitted to the panel. `fill` crops to the panel's shape;
+  # `contain` scales the whole picture in and mattes the rest.
+  RENDER_MODES = %w[ fill contain ].freeze
+
   belongs_to :current_artwork, class_name: "Artwork", optional: true
   belongs_to :next_artwork,    class_name: "Artwork", optional: true
+
+  # A screen that mirrors another. The leader picks; followers show the same
+  # artwork at their own size and in their own render mode.
+  belongs_to :follows_display, class_name: "Display", optional: true
+  has_many :followers, class_name: "Display", foreign_key: :follows_display_id,
+           inverse_of: :follows_display, dependent: :nullify
 
   has_many :display_collections, dependent: :destroy
   has_many :collections, through: :display_collections
@@ -18,6 +28,8 @@ class Display < ApplicationRecord
   validates :name, presence: true
   validates :width, :height, :cycle_seconds, numericality: { greater_than: 0 }
   validates :delivery, inclusion: { in: DELIVERIES }
+  validates :render_mode, inclusion: { in: RENDER_MODES }
+  validate :cannot_follow_itself
   validates :file_path, presence: true, if: :file_delivery?
   validates :max_crop_fraction,
             numericality: { greater_than_or_equal_to: 0, less_than: 1 }
@@ -32,6 +44,12 @@ class Display < ApplicationRecord
   def http_delivery? = delivery == "http"
   def file_delivery? = delivery == "file"
 
+  def fill? = render_mode == "fill"
+  def contain? = render_mode == "contain"
+
+  # A follower shows what its leader shows and keeps the leader's schedule.
+  def follower? = follows_display_id.present?
+
   # Where the rotation job actually writes. `file_path` is stored relative to
   # the configured delivery root so that an operator can put the directory
   # wherever their disk is laid out, and so that a row in an unauthenticated
@@ -45,7 +63,13 @@ class Display < ApplicationRecord
   def aspect_ratio = (width.to_d / height).round(4)
 
   # Nothing has been shown yet, or the current piece has had its turn.
+  #
+  # A follower is never due on its own account: it changes when its leader does,
+  # so letting it advance independently is exactly how the two screens would
+  # drift apart.
   def due?(now: Time.current)
+    return false if follower?
+
     current_since.nil? || current_since + cycle_seconds <= now
   end
 
@@ -69,14 +93,23 @@ class Display < ApplicationRecord
   # An override bypasses collection membership only. It cannot force an
   # unreviewed piece or one too small for the panel onto a wall.
   def eligible_artworks
+    scope = own_eligible_artworks
+
+    # A leader may only pick something every follower can also render — two
+    # screens cannot show the same artwork if one of them cannot display it.
+    followers.each { |f| scope = scope.where(id: f.own_eligible_artworks.select(:id)) }
+
+    scope
+  end
+
+  # What this panel could show if it answered to nobody.
+  def own_eligible_artworks
     # Built with query methods rather than a SQL fragment on purpose: the
     # exception lists are usually empty, and `id NOT IN (NULL)` evaluates to
     # unknown rather than true, which silently disqualifies the whole
     # collection. Rails renders an empty `where.not` as a tautology instead.
-    suitable = Artwork
-      .eligible
-      .where(width: width.., height: height..)
-      .where(aspect_ratio: acceptable_aspect_ratios)
+    suitable = Artwork.eligible.merge(large_enough)
+    suitable = suitable.where(aspect_ratio: acceptable_aspect_ratios) if fill?
 
     from_collections = Artwork
       .where(collection_id: collection_ids)
@@ -85,6 +118,21 @@ class Display < ApplicationRecord
     suitable
       .where(id: from_collections)
       .or(suitable.where(id: overridden_artwork_ids(true)))
+  end
+
+  # Big enough to render without enlarging.
+  #
+  # Cropping to fill scales by the *larger* of the two ratios, so the source has
+  # to beat the panel in both dimensions. Scaling to fit scales by the smaller,
+  # so only the limiting dimension has to: a tall picture needs the height, a
+  # wide one needs the width. That difference is most of why matting admits so
+  # much more of the collection than cropping does.
+  def large_enough
+    return Artwork.where(width: width.., height: height..) if fill?
+
+    Artwork
+      .where(aspect_ratio: aspect_ratio..).where(width: width..)
+      .or(Artwork.where(aspect_ratio: ...aspect_ratio).where(height: height..))
   end
 
   # Move to the next artwork: record the showing, and line up what follows so
@@ -101,7 +149,16 @@ class Display < ApplicationRecord
       update!(current_artwork: upcoming, current_since: now)
       # Picked after the event is recorded, so the piece just shown has spent a
       # slot and will not immediately be chosen again.
-      update!(next_artwork: pick(now: now))
+      following = pick(now: now)
+      update!(next_artwork: following)
+
+      # Followers do not choose. They are told, so that two screens in two rooms
+      # are showing the same picture — which is the whole reason to notice a
+      # painting on one and read about it on the other.
+      followers.each do |follower|
+        follower.display_events.create!(artwork: upcoming, shown_at: now)
+        follower.update!(current_artwork: upcoming, next_artwork: following, current_since: now)
+      end
     end
 
     upcoming
@@ -128,6 +185,28 @@ class Display < ApplicationRecord
     alternatives = remaining.except(current_artwork)
 
     weighted_sample(alternatives.presence || remaining)
+  end
+
+  # How this panel wants an artwork transformed.
+  #
+  # `contain` pads rather than crops, so the whole picture survives and the
+  # remainder is matte. `resize_and_pad` centres by default, which is what a
+  # mounted picture looks like.
+  def variant_transformation
+    if contain?
+      { resize_and_pad: [ width, height, { background: matte_rgb, alpha: false } ],
+        format: :jpeg, saver: { quality: 90 } }
+    else
+      { resize_to_fill: [ width, height ], format: :jpeg, saver: { quality: 88 } }
+    end
+  end
+
+  # "#rrggbb" -> [r, g, b], which is what libvips wants.
+  def matte_rgb
+    hex = matte_color.to_s.delete_prefix("#")
+    return [ 17, 17, 17 ] unless hex.match?(/\A[0-9a-fA-F]{6}\z/)
+
+    hex.scan(/../).map { |pair| pair.to_i(16) }
   end
 
   # Put the current rendition where a file-delivery consumer will find it.
@@ -218,6 +297,10 @@ class Display < ApplicationRecord
       end
 
       slots.keys.last
+    end
+
+    def cannot_follow_itself
+      errors.add(:follows_display, "cannot be itself") if follows_display_id.present? && follows_display_id == id
     end
 
     def overridden_artwork_ids(allowed)
