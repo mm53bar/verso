@@ -44,6 +44,17 @@ class RenditionsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.headers["Cache-Control"], "public"
   end
 
+  # The integration harness computes a Content-Length whether the controller
+  # supplied one or not, so no request-level assertion can tell a buffered
+  # response from a streamed one — the streamed version passed these same tests
+  # while production served chunked responses with no length and answered every
+  # HEAD with 0. This is the assertion that actually holds the fix in place.
+  test "does not stream, because a streamed response cannot carry a length" do
+    assert_not RenditionsController.include?(ActionController::Live),
+      "ActiveStorage::Streaming pulls in Live, whose Buffer deletes " \
+      "Content-Length on the first write"
+  end
+
   test "says how many bytes it is sending" do
     get artwork_rendition_url(@artwork.slug, @kiosk.slug)
 
