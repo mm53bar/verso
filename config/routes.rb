@@ -22,6 +22,16 @@ Rails.application.routes.draw do
   get "artworks/:artwork_slug/renditions/:display_slug" => "renditions#show",
       as: :artwork_rendition
 
+  # Choosing a picture by hand, and stepping the rotation on. Both are ordinary
+  # same-origin form posts rather than anything scripted, which is what keeps
+  # them off the CORS surface entirely — see
+  # docs/adr/20260816-cors-on-the-feed-routes.md. The kiosk page these buttons
+  # live on is served by verso and merely framed by Home Assistant, so a form in
+  # it posts back to verso's own origin.
+  post "displays/:display_slug/advance" => "displays#advance", as: :advance_display
+  post "displays/:display_slug/show/:artwork_slug" => "displays#show_now",
+       as: :show_artwork_on_display
+
   # The story page a wall screen frames: what is on that screen right now.
   # Separate from the browse UI on purpose — see the controller.
   get "kiosk/:display_slug" => "kiosk#show", as: :kiosk

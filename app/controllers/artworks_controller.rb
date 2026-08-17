@@ -5,7 +5,12 @@ class ArtworksController < ApplicationController
 
   def index
     @collections = Collection.by_name.includes(:artworks)
+    @leader = Display.leader
+    @current = @leader&.current_artwork
+    @query = params[:q].to_s.strip
+
     scope = Artwork.includes(:artist, :collection, original_attachment: :blob).by_title
+    scope = scope.matching(@query) if @query.present?
 
     if params[:collection].present?
       @collection = Collection.find_by(slug: params[:collection])

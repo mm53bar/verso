@@ -15,6 +15,24 @@
       <%= @artwork.artist&.name || "Artist unknown" %><%= " · #{@artwork.year_text}" if @artwork.year_text.present? %>
     </p>
 
+    <%# Applied to the leader, so the followers are told and both rooms land on
+        the same picture. Offered for anything, including artworks the rotation
+        would never choose: the aspect rule exists to stop the rotation picking
+        badly, not to overrule someone looking at the picture and asking for it. %>
+    <% if (leader = Display.leader) %>
+      <div class="mt-4 flex items-center gap-3">
+        <% if leader.current_artwork_id == @artwork.id %>
+          <span class="rounded border border-neutral-900 bg-neutral-900 px-3 py-1.5 text-sm text-white">
+            On the screens now
+          </span>
+        <% else %>
+          <%= button_to "Show this on the screens",
+              show_artwork_on_display_path(leader.slug, @artwork.slug),
+              class: "rounded border border-neutral-900 px-3 py-1.5 text-sm hover:bg-neutral-50" %>
+        <% end %>
+      </div>
+    <% end %>
+
     <% if @artwork.blurb.present? %>
       <p class="mt-4 text-sm leading-relaxed"><%= @artwork.blurb %></p>
     <% end %>

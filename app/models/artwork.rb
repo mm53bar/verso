@@ -52,6 +52,26 @@ class Artwork < ApplicationRecord
   scope :untitled,  -> { where(title: nil) }
   scope :by_title,  -> { order(Arel.sql("title IS NULL"), :title) }
 
+  # Search runs in SQL rather than in the browser, because the browse index is
+  # paged at 48 and filtering the rendered page would silently hide matches on
+  # every other page. LIKE over a few hundred rows on SQLite is faster than the
+  # round trip it saves, and the query ends up in the URL, so a search survives a
+  # refresh and the back button.
+  scope :matching, ->(query) {
+    term = "%#{query.to_s.strip.downcase.gsub(/[%_]/) { |c| "\\#{c}" }}%"
+    next all if query.to_s.strip.blank?
+
+    left_joins(:artist, :collection)
+      .where(
+        "LOWER(artworks.title) LIKE :t OR LOWER(artworks.year_text) LIKE :t OR " \
+        "LOWER(artworks.medium) LIKE :t OR LOWER(artworks.current_location) LIKE :t OR " \
+        "LOWER(artworks.blurb) LIKE :t OR LOWER(artists.name) LIKE :t OR " \
+        "LOWER(collections.name) LIKE :t OR LOWER(artworks.source) LIKE :t",
+        t: term
+      )
+      .distinct
+  }
+
   def to_param = slug
 
   def display_title

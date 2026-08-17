@@ -33,6 +33,14 @@
     </header>
 
     <main class="mx-auto max-w-6xl px-5 py-10">
+      <%# Choosing a picture by hand is the one thing here that changes what is on
+          a wall, so it says so rather than redirecting in silence. %>
+      <% if flash[:notice].present? %>
+        <p class="mb-6 rounded border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm">
+          <%= flash[:notice] %>
+        </p>
+      <% end %>
+
       <%= yield %>
     </main>
 

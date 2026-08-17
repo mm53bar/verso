@@ -1,57 +1,122 @@
-<% content_for :title, "Collection" %>
+<% content_for :title, @query.present? ? "Search: #{@query}" : "Collection" %>
 
-<header class="mb-8">
-  <h1 class="text-3xl font-semibold tracking-tight">Collection</h1>
-  <p class="mt-1 text-sm text-neutral-500">
-    <%= pluralize(@total, "artwork") %><%= " · page #{@page} of #{@pages}" if @pages > 1 %>
-  </p>
-
-  <nav class="mt-4 flex flex-wrap gap-2 text-sm">
-    <%= link_to "All", artworks_path,
-        class: "rounded-full border px-3 py-1 #{params[:collection] ? 'border-neutral-300' : 'border-neutral-900 bg-neutral-900 text-white'}" %>
-    <% @collections.each do |collection| %>
-      <%= link_to "#{collection.name} (#{collection.artworks.size})",
-          artworks_path(collection: collection.slug),
-          class: "rounded-full border px-3 py-1 #{params[:collection] == collection.slug ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-300'}" %>
-    <% end %>
-  </nav>
-</header>
-
-<ul class="grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
-  <% @artworks.each do |artwork| %>
-    <li>
-      <%= link_to artwork_path(artwork), class: "group block" do %>
-        <div class="aspect-[16/10] overflow-hidden rounded bg-neutral-100">
-          <% if artwork.original.attached? %>
-            <%= image_tag artwork.thumbnail, loading: "lazy", decoding: "async",
-                width: 480, height: 300, class: "h-full w-full object-cover" %>
-          <% end %>
-        </div>
-        <p class="mt-2 text-sm font-medium leading-snug group-hover:underline"><%= artwork.display_title %></p>
-        <p class="text-xs text-neutral-500">
-          <%= artwork.artist&.name %><%= " · #{artwork.year_text}" if artwork.year_text.present? %>
-        </p>
-      <% end %>
-    </li>
-  <% end %>
-</ul>
-
-<% if @pages > 1 %>
-  <nav class="mt-8 flex items-center justify-between text-sm">
-    <% if @page > 1 %>
-      <%= link_to "← Previous", artworks_path(collection: params[:collection], page: @page - 1),
-          class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
-    <% else %>
-      <span></span>
+<%# What is on the wall right now, at the top, because that is the question this
+    page gets asked most and it was previously only answerable by walking into
+    another room. The rotation runs hourly, so "Next" is also the only way to
+    move it on without waiting. %>
+<% if @current %>
+  <section class="mb-8 flex items-center gap-5 rounded-2xl border border-neutral-300 p-4">
+    <%= link_to artwork_path(@current), class: "shrink-0" do %>
+      <div class="aspect-[16/10] w-36 overflow-hidden rounded bg-neutral-100">
+        <% if @current.original.attached? %>
+          <%= image_tag @current.thumbnail, width: 480, height: 300,
+              decoding: "async", class: "h-full w-full object-cover" %>
+        <% end %>
+      </div>
     <% end %>
 
-    <span class="text-neutral-500">page <%= @page %> of <%= @pages %></span>
+    <div class="min-w-0 flex-1">
+      <p class="text-xs uppercase tracking-wide text-neutral-500">On the screens now</p>
+      <p class="mt-1 truncate text-lg font-semibold leading-snug">
+        <%= link_to @current.display_title, artwork_path(@current), class: "hover:underline" %>
+      </p>
+      <p class="truncate text-sm text-neutral-500">
+        <%= @current.artist&.name %><%= " · #{@current.year_text}" if @current.year_text.present? %>
+        <% if @leader.current_since %>
+          · since <%= @leader.current_since.strftime("%H:%M") %>
+        <% end %>
+      </p>
+    </div>
 
-    <% if @page < @pages %>
-      <%= link_to "Next →", artworks_path(collection: params[:collection], page: @page + 1),
-          class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
-    <% else %>
-      <span></span>
-    <% end %>
-  </nav>
+    <%= button_to "Next →", advance_display_path(@leader.slug),
+        class: "shrink-0 rounded border border-neutral-300 px-3 py-1.5 text-sm hover:bg-neutral-50" %>
+  </section>
 <% end %>
+
+<div data-controller="artwork-search"
+     data-artwork-search-url-value="<%= artworks_path %>">
+  <header class="mb-6">
+    <h1 class="text-3xl font-semibold tracking-tight">Collection</h1>
+
+    <%# Outside the frame on purpose: the frame's contents are replaced on every
+        keystroke, and an input inside it would lose focus and the caret. %>
+    <div class="relative mt-4">
+      <%= search_field_tag :q, @query,
+          placeholder: "Search title, artist, collection, where it hangs…",
+          autocomplete: "off",
+          data: {
+            artwork_search_target: "input",
+            action: "input->artwork-search#query keydown->artwork-search#keydown"
+          },
+          class: "w-full rounded-full border border-neutral-300 px-5 py-2.5 pr-10 " \
+                 "focus:border-neutral-900 focus:outline-none" %>
+
+      <a href="#" hidden data-artwork-search-target="clear"
+         data-action="artwork-search#clear"
+         aria-label="Clear search"
+         class="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-900">×</a>
+    </div>
+  </header>
+
+  <%= turbo_frame_tag "collection", target: "_top",
+      data: { artwork_search_target: "frame", turbo_action: "advance" } do %>
+    <p class="text-sm text-neutral-500">
+      <%= pluralize(@total, "artwork") %><%= " matching “#{@query}”" if @query.present? %><%= " · page #{@page} of #{@pages}" if @pages > 1 %>
+    </p>
+
+    <nav class="mt-3 flex flex-wrap gap-2 text-sm">
+      <%= link_to "All", artworks_path(q: @query.presence),
+          class: "rounded-full border px-3 py-1 #{params[:collection] ? 'border-neutral-300' : 'border-neutral-900 bg-neutral-900 text-white'}" %>
+      <% @collections.each do |collection| %>
+        <%= link_to "#{collection.name} (#{collection.artworks.size})",
+            artworks_path(collection: collection.slug, q: @query.presence),
+            class: "rounded-full border px-3 py-1 #{params[:collection] == collection.slug ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-300'}" %>
+      <% end %>
+    </nav>
+
+    <% if @artworks.empty? %>
+      <p class="mt-8 text-neutral-500">Nothing matches that.</p>
+    <% end %>
+
+    <ul class="mt-5 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-4">
+      <% @artworks.each do |artwork| %>
+        <li>
+          <%= link_to artwork_path(artwork), class: "group block" do %>
+            <div class="aspect-[16/10] overflow-hidden rounded bg-neutral-100">
+              <% if artwork.original.attached? %>
+                <%= image_tag artwork.thumbnail, loading: "lazy", decoding: "async",
+                    width: 480, height: 300, class: "h-full w-full object-cover" %>
+              <% end %>
+            </div>
+            <p class="mt-2 text-sm font-medium leading-snug group-hover:underline"><%= artwork.display_title %></p>
+            <p class="text-xs text-neutral-500">
+              <%= artwork.artist&.name %><%= " · #{artwork.year_text}" if artwork.year_text.present? %>
+            </p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+
+    <% if @pages > 1 %>
+      <nav class="mt-8 flex items-center justify-between text-sm">
+        <% if @page > 1 %>
+          <%= link_to "← Previous",
+              artworks_path(collection: params[:collection], q: @query.presence, page: @page - 1),
+              class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
+        <% else %>
+          <span></span>
+        <% end %>
+
+        <span class="text-neutral-500">page <%= @page %> of <%= @pages %></span>
+
+        <% if @page < @pages %>
+          <%= link_to "Next →",
+              artworks_path(collection: params[:collection], q: @query.presence, page: @page + 1),
+              class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
+        <% else %>
+          <span></span>
+        <% end %>
+      </nav>
+    <% end %>
+  <% end %>
+</div>

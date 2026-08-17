@@ -154,9 +154,20 @@ class Display < ApplicationRecord
     upcoming = committed_next || pick(now: now)
     return if upcoming.nil?
 
+    show!(upcoming, now: now)
+  end
+
+  # Put a particular artwork up, on this screen and everything following it.
+  #
+  # Used by the rotation and by a person choosing from the browse pages, which
+  # are the same act: something decides, and the screens are told. Deliberately
+  # does not check eligibility — a person looking at a picture and asking for it
+  # has better judgement than the aspect-ratio rule, which exists to keep the
+  # rotation from choosing badly rather than to overrule a human.
+  def show!(artwork, now: Time.current)
     transaction do
-      display_events.create!(artwork: upcoming, shown_at: now)
-      update!(current_artwork: upcoming, current_since: now)
+      display_events.create!(artwork: artwork, shown_at: now)
+      update!(current_artwork: artwork, current_since: now)
       # Picked after the event is recorded, so the piece just shown has spent a
       # slot and will not immediately be chosen again.
       following = pick(now: now)
@@ -166,12 +177,18 @@ class Display < ApplicationRecord
       # are showing the same picture — which is the whole reason to notice a
       # painting on one and read about it on the other.
       followers.each do |follower|
-        follower.display_events.create!(artwork: upcoming, shown_at: now)
-        follower.update!(current_artwork: upcoming, next_artwork: following, current_since: now)
+        follower.display_events.create!(artwork: artwork, shown_at: now)
+        follower.update!(current_artwork: artwork, next_artwork: following, current_since: now)
       end
     end
 
-    upcoming
+    artwork
+  end
+
+  # The screen that decides, which is the one a person should be told about and
+  # the one a manual choice has to be applied to.
+  def self.leader
+    active.find { |display| display.follows_display_id.nil? }
   end
 
   # Weighted, but coverage first. Every eligible artwork spends all of its slots
