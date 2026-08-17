@@ -34,6 +34,28 @@ class Artwork < ApplicationRecord
     title.presence || "Untitled"
   end
 
+  # The browse UI's thumbnail. Defined once, here, because the view and the
+  # warmer have to ask for the *identical* transformation — a variant differing
+  # by so much as its quality setting is a different cache entry, so a mismatch
+  # would silently pre-generate images nobody ever requests.
+  THUMBNAIL = { resize_to_fill: [ 480, 300 ], format: :jpeg, saver: { quality: 80 } }.freeze
+
+  def thumbnail
+    original.variant(**THUMBNAIL)
+  end
+
+  # Every derivative this artwork needs: the browse thumbnail plus one rendition
+  # per active display. Deriving these on demand is what made the index
+  # unusable — a 480x300 thumbnail from a 717MB original takes 42 seconds on the
+  # NAS, and there are only three Puma threads to spend.
+  def warm_derivatives!
+    return 0 unless original.attached?
+
+    thumbnail.processed
+    Display.active.each { |display| rendition_for(display).processed }
+    1 + Display.active.count
+  end
+
   # A JPEG fitted to this display — cropped to fill, or scaled and matted,
   # depending on what that screen is for. Generated on demand and cached by
   # Active Storage; the URL a client sees must not embed the variant key, or

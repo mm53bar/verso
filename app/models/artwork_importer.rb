@@ -63,6 +63,11 @@ class ArtworkImporter
     artwork.original.attach(io: bytes, filename: filename, content_type: @attributes[:content_type])
     artwork.record_dimensions!
 
+    # Derive the thumbnail and each display's rendition now, in the background,
+    # rather than making whoever opens the page next pay for it. On the NAS that
+    # bill is tens of seconds per image.
+    WarmDerivativesJob.perform_later(artwork.id)
+
     Result.new(artwork, nil)
   rescue ActiveRecord::RecordInvalid => e
     Result.new(nil, e.record.errors.full_messages.to_sentence)

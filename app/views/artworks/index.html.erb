@@ -2,7 +2,9 @@
 
 <header class="mb-8">
   <h1 class="text-3xl font-semibold tracking-tight">Collection</h1>
-  <p class="mt-1 text-sm text-neutral-500"><%= pluralize(@artworks.size, "artwork") %></p>
+  <p class="mt-1 text-sm text-neutral-500">
+    <%= pluralize(@total, "artwork") %><%= " · page #{@page} of #{@pages}" if @pages > 1 %>
+  </p>
 
   <nav class="mt-4 flex flex-wrap gap-2 text-sm">
     <%= link_to "All", artworks_path,
@@ -21,8 +23,8 @@
       <%= link_to artwork_path(artwork), class: "group block" do %>
         <div class="aspect-[16/10] overflow-hidden rounded bg-neutral-100">
           <% if artwork.original.attached? %>
-            <%= image_tag artwork.original.variant(resize_to_fill: [ 480, 300 ], format: :jpeg),
-                loading: "lazy", class: "h-full w-full object-cover" %>
+            <%= image_tag artwork.thumbnail, loading: "lazy", decoding: "async",
+                width: 480, height: 300, class: "h-full w-full object-cover" %>
           <% end %>
         </div>
         <p class="mt-2 text-sm font-medium leading-snug group-hover:underline"><%= artwork.display_title %></p>
@@ -33,3 +35,23 @@
     </li>
   <% end %>
 </ul>
+
+<% if @pages > 1 %>
+  <nav class="mt-8 flex items-center justify-between text-sm">
+    <% if @page > 1 %>
+      <%= link_to "← Previous", artworks_path(collection: params[:collection], page: @page - 1),
+          class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
+    <% else %>
+      <span></span>
+    <% end %>
+
+    <span class="text-neutral-500">page <%= @page %> of <%= @pages %></span>
+
+    <% if @page < @pages %>
+      <%= link_to "Next →", artworks_path(collection: params[:collection], page: @page + 1),
+          class: "rounded border border-neutral-300 px-3 py-1.5 hover:bg-neutral-50" %>
+    <% else %>
+      <span></span>
+    <% end %>
+  </nav>
+<% end %>

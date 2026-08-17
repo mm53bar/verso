@@ -52,3 +52,19 @@ namespace :verso do
     abort "restore incomplete" if failed.any?
   end
 end
+
+namespace :verso do
+  desc "Pre-generate every thumbnail and display rendition: bin/rails verso:warm"
+  task warm: :environment do
+    total = Artwork.count
+    done = 0
+    Artwork.find_each.with_index(1) do |artwork, i|
+      done += artwork.warm_derivatives!
+      puts "  #{i}/#{total} #{artwork.slug}"
+      $stdout.flush
+    rescue StandardError => e
+      puts "  #{i}/#{total} FAILED #{artwork.slug}: #{e.class}"
+    end
+    puts "warmed #{done} derivatives"
+  end
+end

@@ -1,8 +1,23 @@
 class ArtworksController < ApplicationController
+  # 154 thumbnails on one page is roughly 8MB and 154 requests. Paged by hand
+  # rather than with a gem: it is a limit, an offset and two links.
+  PER_PAGE = 48
+
   def index
     @collections = Collection.by_name.includes(:artworks)
-    @artworks = Artwork.includes(:artist, :collection, original_attachment: :blob).by_title
-    @artworks = @artworks.where(collection: Collection.find_by(slug: params[:collection])) if params[:collection]
+    scope = Artwork.includes(:artist, :collection, original_attachment: :blob).by_title
+
+    if params[:collection].present?
+      @collection = Collection.find_by(slug: params[:collection])
+      scope = scope.where(collection: @collection)
+    end
+
+    @total = scope.count
+    @page = [ params[:page].to_i, 1 ].max
+    @pages = [ (@total / PER_PAGE.to_f).ceil, 1 ].max
+    @page = @pages if @page > @pages
+
+    @artworks = scope.limit(PER_PAGE).offset((@page - 1) * PER_PAGE)
   end
 
   def show
