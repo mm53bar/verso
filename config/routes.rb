@@ -11,8 +11,16 @@ Rails.application.routes.draw do
   # Stable per artwork and display: the bytes behind this URL never change, so
   # it can be cached hard, and regenerating a variant does not make a screen
   # swap for no reason. An Active Storage key in the URL would do both.
+  #
+  # The format is NOT defaulted here. A `defaults: { format: :jpg }` makes Rails
+  # leave the extension out of every URL it generates, since it matches the
+  # default -- so callers asking for `format: :jpg` silently got an
+  # extensionless URL. Clients are meant to be dumb, and an extensionless image
+  # URL asks them to be clever: one of them refused the image outright rather
+  # than read the Content-Type. Callers pass the extension explicitly, and
+  # Display#rendition_extension is where it comes from.
   get "artworks/:artwork_slug/renditions/:display_slug" => "renditions#show",
-      as: :artwork_rendition, defaults: { format: :jpg }
+      as: :artwork_rendition
 
   # The story page a wall screen frames: what is on that screen right now.
   # Separate from the browse UI on purpose — see the controller.

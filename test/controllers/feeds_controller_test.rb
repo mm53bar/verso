@@ -38,6 +38,17 @@ class FeedsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.parsed_body["next_url"], artworks(:native_4k).slug
   end
 
+  test "the urls it publishes say what format they are" do
+    get display_current_url(@kiosk.slug)
+
+    # A client should not have to read a Content-Type -- or worse, the bytes --
+    # to learn that an image is a JPEG. One of them refused it outright instead.
+    assert response.parsed_body["url"].end_with?(".jpg"),
+      "feed url gives no clue what it serves: #{response.parsed_body["url"]}"
+    assert response.parsed_body["next_url"].end_with?(".jpg"),
+      "next_url gives no clue what it serves: #{response.parsed_body["next_url"]}"
+  end
+
   test "reports how long the current piece has left, so a client can poll freely" do
     @kiosk.update!(current_since: 300.seconds.ago)
 

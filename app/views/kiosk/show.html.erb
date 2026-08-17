@@ -15,7 +15,8 @@
   <% else %>
     <figure class="relative h-full w-[42%] shrink-0 bg-black">
       <% if @artwork.original.attached? %>
-        <%= image_tag artwork_rendition_path(@artwork.slug, @display.slug),
+        <%= image_tag artwork_rendition_path(@artwork.slug, @display.slug,
+                                            format: @display.rendition_extension),
               class: "h-full w-full object-cover", alt: @artwork.display_title %>
       <% end %>
     </figure>

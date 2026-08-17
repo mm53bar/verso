@@ -164,6 +164,22 @@ class DisplayTest < ActiveSupport::TestCase
     assert_predicate @television, :valid?
   end
 
+  test "the rendition extension follows the format the variant is generated in" do
+    assert_equal :jpg, @television.rendition_extension
+    assert_equal :jpeg, @television.variant_transformation[:format]
+  end
+
+  test "every render mode has an extension for the format it produces" do
+    Display::RENDER_MODES.each do |mode|
+      @television.render_mode = mode
+
+      # Not a tautology: rendition_extension fetches, so a new render mode that
+      # generates a format nobody mapped fails here rather than putting a .jpg
+      # url in the feed for bytes that are not one.
+      assert_nothing_raised { @television.rendition_extension }
+    end
+  end
+
   private
     def with_delivery_root(path)
       original = ENV["VERSO_DELIVERY_PATH"]

@@ -5,7 +5,8 @@ json.seconds_remaining @seconds_remaining
 if @artwork
   json.artwork_id @artwork.id
   json.slug @artwork.slug
-  json.url artwork_rendition_url(@artwork.slug, @display.slug, format: :jpg)
+  json.url artwork_rendition_url(@artwork.slug, @display.slug,
+                                 format: @display.rendition_extension)
   json.since @display.current_since&.iso8601
 
   json.title @artwork.title
@@ -23,4 +24,5 @@ else
   json.url nil
 end
 
-json.next_url(@next_artwork ? artwork_rendition_url(@next_artwork.slug, @display.slug, format: :jpg) : nil)
+json.next_url(@next_artwork ? artwork_rendition_url(@next_artwork.slug, @display.slug,
+                                                    format: @display.rendition_extension) : nil)

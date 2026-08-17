@@ -201,6 +201,18 @@ class Display < ApplicationRecord
     end
   end
 
+  # The extension a rendition URL for this display should carry.
+  #
+  # Derived from the format the variant is actually generated in, so a URL
+  # cannot come to disagree with the bytes behind it. `fetch` twice on purpose:
+  # a new rendition format that nobody gave an extension to raises here rather
+  # than quietly serving `.jpg` over a PNG.
+  RENDITION_EXTENSIONS = { jpeg: :jpg, png: :png }.freeze
+
+  def rendition_extension
+    RENDITION_EXTENSIONS.fetch(variant_transformation.fetch(:format))
+  end
+
   # "#rrggbb" -> [r, g, b], which is what libvips wants.
   def matte_rgb
     hex = matte_color.to_s.delete_prefix("#")
