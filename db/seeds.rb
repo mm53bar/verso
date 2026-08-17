@@ -47,9 +47,16 @@ end
 #                        Group of Seven sketch panel to 16:9 discards a third of
 #                        the picture. Matting instead took the set both screens
 #                        can share from 76 artworks to 117.
+# Sized to the panel, not above it. The Echo Show 8 is physically 1280x800 (a
+# CSS viewport of 854x534 at dpr 1.5), so a 1920x1200 rendition was 1049KB where
+# 1280x800 is 450KB — 2.3x the bytes for pixels the device cannot display, sent
+# over wifi to a slow decoder every cycle.
+#
+# A screen of a different size is a new row, not a new size here: an Echo Show 5
+# is 960x480, a different aspect ratio again, and gets its own Display.
 kiosk = Display.find_or_initialize_by(slug: "kiosk-panel")
 kiosk.update!(
-  name: "Kiosk panel", width: 1920, height: 1200,
+  name: "Kiosk panel", width: 1280, height: 800,
   cycle_seconds: 1.hour.to_i, delivery: "http", render_mode: "fill", active: true
 )
 
