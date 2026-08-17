@@ -120,19 +120,25 @@ class Display < ApplicationRecord
       .or(suitable.where(id: overridden_artwork_ids(true)))
   end
 
-  # Big enough to render without enlarging.
+  # Big enough to render, allowing whatever enlargement its collection permits.
   #
   # Cropping to fill scales by the *larger* of the two ratios, so the source has
   # to beat the panel in both dimensions. Scaling to fit scales by the smaller,
   # so only the limiting dimension has to: a tall picture needs the height, a
   # wide one needs the width. That difference is most of why matting admits so
   # much more of the collection than cropping does.
+  #
+  # The threshold is per collection, because how much a picture can be enlarged
+  # is a fact about the material rather than about the screen — see
+  # Collection#max_upscale. One term per distinct allowance, OR'd together, so
+  # this stays query methods over one table rather than arithmetic in a SQL
+  # string across a join.
   def large_enough
-    return Artwork.where(width: width.., height: height..) if fill?
+    terms = Collection.pluck(:id, :max_upscale).group_by(&:last).map do |upscale, rows|
+      Artwork.where(collection_id: rows.map(&:first)).merge(fits_within(upscale))
+    end
 
-    Artwork
-      .where(aspect_ratio: aspect_ratio..).where(width: width..)
-      .or(Artwork.where(aspect_ratio: ...aspect_ratio).where(height: height..))
+    terms.reduce(:or) || Artwork.none
   end
 
   # Move to the next artwork: record the showing, and line up what follows so
@@ -273,6 +279,21 @@ class Display < ApplicationRecord
   end
 
   private
+    # Artworks this panel can render when they may be enlarged up to `upscale`.
+    #
+    # Ceil rather than floor: at 1.0 the two are identical, and above it a
+    # rounded-down threshold would admit a piece that lands a pixel short.
+    def fits_within(upscale)
+      needed_width = (width / upscale).ceil
+      needed_height = (height / upscale).ceil
+
+      return Artwork.where(width: needed_width.., height: needed_height..) if fill?
+
+      Artwork
+        .where(aspect_ratio: aspect_ratio..).where(width: needed_width..)
+        .or(Artwork.where(aspect_ratio: ...aspect_ratio).where(height: needed_height..))
+    end
+
     # The piece lined up last time, provided it is still showable — a curator
     # may have deactivated it, or a re-import may have changed its dimensions,
     # in the meantime.

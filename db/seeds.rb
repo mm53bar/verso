@@ -27,7 +27,14 @@ collections = {
     description: "Film, strip and book wallpapers. Weighted up so a small group " \
                  "is not diluted by a large one.",
     weight: 3,
-    minimum_aspect_ratio: 1.30
+    minimum_aspect_ratio: 1.30,
+    # The only collection allowed to be enlarged, and the reason is the material.
+    # Cel and watercolour art is flat colour bounded by line, so 2x invents
+    # almost nothing and is invisible across a room; the same treatment of a
+    # photographed oil painting looks like an upscale. Without this the 4K
+    # television is the binding constraint and cartoon wallpapers at native
+    # 3840x2160 barely exist, which left 6 of 8 deactivated.
+    max_upscale: 2.0
   }
 }.to_h do |name, attributes|
   collection = Collection.find_or_initialize_by(name: name)
