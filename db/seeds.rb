@@ -70,11 +70,15 @@ kiosk.update!(
 television = Display.find_or_initialize_by(slug: "television")
 television.update!(
   name: "Television", width: 3840, height: 2160,
-  cycle_seconds: 1.hour.to_i, delivery: "file", render_mode: "contain",
+  cycle_seconds: 1.hour.to_i, render_mode: "contain",
   matte_color: "#111111",
-  # Relative to VERSO_DELIVERY_PATH, never an absolute path — see
-  # docs/adr/20260816-filesystem-paths-are-configuration.md.
-  file_path: "television/current.jpg", active: true,
+  # http, not file. This was a file drop for one day, because the uploader was a
+  # cron script that had to read the rendition from somewhere. The upload now
+  # lives in a Home Assistant integration, which fetches current.json and then
+  # the rendition URL like any other client — so there is no shared filesystem,
+  # no rename() dance, and both screens are ordinary subscribers to one feed.
+  # `file` delivery is still supported; nothing here uses it.
+  delivery: "http", file_path: nil, active: true,
   follows_display: kiosk
 )
 
