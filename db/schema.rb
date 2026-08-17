@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_180749) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_17_210918) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -60,6 +60,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_180749) do
     t.datetime "created_at", null: false
     t.string "credit_line"
     t.string "current_location"
+    t.boolean "favourite", default: false, null: false
     t.integer "height"
     t.string "license"
     t.string "medium"
@@ -80,6 +81,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_180749) do
     t.index ["artist_id"], name: "index_artworks_on_artist_id"
     t.index ["collection_id", "active", "reviewed", "aspect_ratio"], name: "index_artworks_on_eligibility"
     t.index ["collection_id"], name: "index_artworks_on_collection_id"
+    t.index ["favourite"], name: "index_artworks_on_favourite"
     t.index ["slug"], name: "index_artworks_on_slug", unique: true
   end
 

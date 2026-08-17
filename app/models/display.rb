@@ -316,10 +316,16 @@ class Display < ApplicationRecord
   # An artwork's own weight scaled by what this screen thinks of its
   # collection. Lets one sub-collection be frequent on one screen and absent
   # from another without duplicating a byte.
+  # A starred piece comes up twice as often. One named multiplier, applied here,
+  # because here is where weight is decided -- see the migration that added
+  # `favourite` for why it is not another weight column.
+  FAVOURITE_MULTIPLIER = 2
+
   def weight_for(artwork)
     collection_weight = display_collections.find_by(collection_id: artwork.collection_id)&.weight || 1
+    starred = artwork.favourite? ? FAVOURITE_MULTIPLIER : 1
 
-    artwork.weight * collection_weight
+    artwork.weight * collection_weight * starred
   end
 
   private

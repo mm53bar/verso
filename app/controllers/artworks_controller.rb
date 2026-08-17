@@ -25,6 +25,17 @@ class ArtworksController < ApplicationController
     @artworks = scope.limit(PER_PAGE).offset((@page - 1) * PER_PAGE)
   end
 
+  # Star or unstar. A starred piece comes up twice as often, which is the whole
+  # feature: Display::FAVOURITE_MULTIPLIER is the only thing that reads it.
+  def favourite
+    artwork = Artwork.find_by!(slug: params[:artwork_slug])
+    artwork.update!(favourite: !artwork.favourite?)
+
+    redirect_back fallback_location: artwork_path(artwork),
+      notice: artwork.favourite? ? "Starred #{artwork.display_title}. It will come up twice as often." :
+                                   "Unstarred #{artwork.display_title}."
+  end
+
   def show
     @artwork = Artwork.find_by!(slug: params[:id])
     @displays = Display.active.select { |display| display.eligible_artworks.exists?(@artwork.id) }

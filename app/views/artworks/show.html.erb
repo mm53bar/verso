@@ -30,6 +30,14 @@
               show_artwork_on_display_path(leader.slug, @artwork.slug),
               class: "rounded border border-neutral-900 px-3 py-1.5 text-sm hover:bg-neutral-50" %>
         <% end %>
+
+        <%# A star means it comes up twice as often. Nothing else. %>
+        <%= button_to favourite_artwork_path(@artwork.slug),
+            title: @artwork.favourite? ? "Starred: comes up twice as often" : "Star this",
+            class: "rounded border px-3 py-1.5 text-sm #{@artwork.favourite? ?
+              'border-amber-700 text-amber-700' : 'border-neutral-300 hover:bg-neutral-50'}" do %>
+          <%= @artwork.favourite? ? "★ Starred" : "☆ Star" %>
+        <% end %>
       </div>
     <% end %>
 

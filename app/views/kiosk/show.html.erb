@@ -66,11 +66,22 @@
       <%# Reachable from the wall itself. This page is served by verso and merely
           framed by Home Assistant, so the form posts to verso's own origin and
           needs no CORS and no script. Sized for a finger at counter distance. %>
-      <div class="mt-4 shrink-0">
+      <div class="mt-4 flex shrink-0 gap-3">
         <%= button_to "Next picture →", advance_display_path(@display.slug),
-            class: "w-full rounded-2xl border border-neutral-700 bg-neutral-900 " \
+            class: "flex-1 rounded-2xl border border-neutral-700 bg-neutral-900 " \
                    "px-5 py-3 text-[19px] text-neutral-200 active:bg-neutral-800" %>
+
+        <%# Wide enough for a finger at counter distance, and it says what the star
+            does rather than leaving it to be guessed. %>
+        <%= button_to favourite_artwork_path(@artwork.slug),
+            class: "rounded-2xl border px-5 py-3 text-[19px] active:opacity-70 #{@artwork.favourite? ?
+              'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-neutral-700 text-neutral-400'}" do %>
+          <%= @artwork.favourite? ? "★" : "☆" %>
+        <% end %>
       </div>
+      <% if @artwork.favourite? %>
+        <p class="mt-1 shrink-0 text-[15px] text-amber-500/80">Starred, so it comes up twice as often.</p>
+      <% end %>
 
       <footer class="mt-4 shrink-0 border-t border-neutral-800 pt-3">
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[17px]">

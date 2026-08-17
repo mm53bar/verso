@@ -50,6 +50,7 @@ class Artwork < ApplicationRecord
   scope :eligible,  -> { active.reviewed }
 
   scope :untitled,  -> { where(title: nil) }
+  scope :starred,   -> { where(favourite: true) }
   scope :by_title,  -> { order(Arel.sql("title IS NULL"), :title) }
 
   # Search runs in SQL rather than in the browser, because the browse index is

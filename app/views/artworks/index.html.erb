@@ -88,7 +88,9 @@
                     width: 480, height: 300, class: "h-full w-full object-cover" %>
               <% end %>
             </div>
-            <p class="mt-2 text-sm font-medium leading-snug group-hover:underline"><%= artwork.display_title %></p>
+            <p class="mt-2 text-sm font-medium leading-snug group-hover:underline">
+              <% if artwork.favourite? %><span class="text-amber-700" title="Starred">★</span> <% end %><%= artwork.display_title %>
+            </p>
             <p class="text-xs text-neutral-500">
               <%= artwork.artist&.name %><%= " · #{artwork.year_text}" if artwork.year_text.present? %>
             </p>

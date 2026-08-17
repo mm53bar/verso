@@ -28,6 +28,7 @@ Rails.application.routes.draw do
   # docs/adr/20260816-cors-on-the-feed-routes.md. The kiosk page these buttons
   # live on is served by verso and merely framed by Home Assistant, so a form in
   # it posts back to verso's own origin.
+  post "artworks/:artwork_slug/favourite" => "artworks#favourite", as: :favourite_artwork
   post "displays/:display_slug/advance" => "displays#advance", as: :advance_display
   post "displays/:display_slug/show/:artwork_slug" => "displays#show_now",
        as: :show_artwork_on_display
