@@ -104,8 +104,16 @@ class WikidataLookup
   end
 
   private
+    # The label service falls back to the raw URI when a node has no label, so
+    # an unlabelled or anonymous node arrives as
+    # "http://www.wikidata.org/.well-known/genid/9be35fb1…" — which got stored
+    # and displayed as an artwork's location. A value that is still a URI is a
+    # lookup that failed, not an answer.
     def value(row, key)
-      row.dig(key, "value").presence
+      raw = row.dig(key, "value").presence
+      return if raw.nil? || raw.start_with?("http://", "https://") && key != "article"
+
+      raw
     end
 
     def query
