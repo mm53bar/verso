@@ -104,14 +104,23 @@ class WikidataLookup
   end
 
   private
-    # The label service falls back to the raw URI when a node has no label, so
-    # an unlabelled or anonymous node arrives as
-    # "http://www.wikidata.org/.well-known/genid/9be35fb1…" — which got stored
-    # and displayed as an artwork's location. A value that is still a URI is a
-    # lookup that failed, not an answer.
+    # A lookup that failed, dressed as an answer. The label service has two ways
+    # of doing this and both have reached the screens:
+    #
+    #   * an anonymous node comes back as its raw URI,
+    #     "http://www.wikidata.org/.well-known/genid/9be35fb1…"
+    #   * an entity with no label in any requested language comes back as its
+    #     bare id, "Q214867" — which is the National Gallery of Art in
+    #     Washington, and which sat in `current_location` on nine artworks and
+    #     was corrected by hand three times before being fixed here.
+    #
+    # Neither is a name, and a blurb is read aloud, so neither can be stored.
+    UNLABELLED = /\A(?:https?:\/\/|Q\d+\z)/
+
     def value(row, key)
       raw = row.dig(key, "value").presence
-      return if raw.nil? || raw.start_with?("http://", "https://") && key != "article"
+      return raw if key == "article"
+      return if raw.nil? || raw.match?(UNLABELLED)
 
       raw
     end
