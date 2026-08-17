@@ -1,5 +1,11 @@
 # 20260817 — One rotation across screens, and matting instead of cropping
 
+> **The matting half of this is superseded by [20260817 — Fit the screen, not the art](20260817-fit-the-screen-not-the-art.md).**
+> One rotation across both screens stands. The television crops now: seen on the
+> wall, a mount on a 65 inch landscape screen looked worse than a small crop, and
+> the claim below that a real Frame mattes rather than crops is wrong — the
+> purchased Frame art is cropped to exactly 3840x2160.
+
 ## Context
 
 The two screens ran independent rotations. That was the obvious reading of

@@ -66,8 +66,13 @@ kiosk.update!(
 television = Display.find_or_initialize_by(slug: "television")
 television.update!(
   name: "Television", width: 3840, height: 2160,
-  cycle_seconds: 1.hour.to_i, render_mode: "contain",
-  matte_color: "#111111",
+  cycle_seconds: 1.hour.to_i,
+  # Crops, and its aspect window is what decides the whole collection, because
+  # the kiosk may only pick what this screen can also render. 0.10 is at most a
+  # tenth of the picture discarded, so 5% off each edge. Matting was tried first
+  # and looked wrong on the wall; see
+  # docs/adr/20260817-fit-the-screen-not-the-art.md.
+  render_mode: "fill", max_crop_fraction: 0.10,
   # http, not file. This was a file drop for one day, because the uploader was a
   # cron script that had to read the rendition from somewhere. The upload now
   # lives in a Home Assistant integration, which fetches current.json and then
