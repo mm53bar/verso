@@ -92,11 +92,11 @@ class KioskControllerTest < ActionDispatch::IntegrationTest
     assert_response :not_found
   end
 
-  # The stacked layout: one scroll instead of three fixed bands. Measured on the
+  # One scroll instead of three fixed bands. Measured on the
   # real page, the old one gave the story 134px of a 486px column and as little
   # as 91px with a long title, while trying to show 1660 characters.
-  test "the stacked layout scrolls as one column rather than pinning bands" do
-    get kiosk_url(@kiosk.slug, layout: "stacked")
+  test "the story page scrolls as one column rather than pinning bands" do
+    get kiosk_url(@kiosk.slug)
 
     assert_response :success
     assert_select "div.overflow-y-auto", 1,
@@ -106,7 +106,7 @@ class KioskControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "the controls sit on the picture, where they cost the story nothing" do
-    get kiosk_url(@kiosk.slug, layout: "stacked")
+    get kiosk_url(@kiosk.slug)
 
     assert_select "figure form[action=?]", advance_display_path(@kiosk.slug)
     assert_select "figure button", { text: /Next/ },
@@ -114,20 +114,13 @@ class KioskControllerTest < ActionDispatch::IntegrationTest
     assert_select "figure form[action=?]", favourite_artwork_path(@artwork.slug)
   end
 
-  test "the stacked layout drops the collection row" do
+  test "the story page drops the collection row" do
     @artwork.update!(current_location: "Rijksmuseum, Amsterdam")
 
-    get kiosk_url(@kiosk.slug, layout: "stacked")
+    get kiosk_url(@kiosk.slug)
 
     assert_select "dt", text: "Where"
     assert_select "dt", { text: "Collection", count: 0 },
       "which verso grouping a piece belongs to is bookkeeping, not a wall label"
-  end
-
-  test "without the parameter the old layout is untouched" do
-    get kiosk_url(@kiosk.slug)
-
-    assert_response :success
-    assert_select "header.shrink-0", 1, "the other screen is still using this one"
   end
 end

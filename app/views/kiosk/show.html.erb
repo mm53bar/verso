@@ -4,8 +4,21 @@
   Sized for a 854x534 CSS viewport read from a few feet away. Type is
   deliberately larger than the browse UI: what is comfortable on a laptop is
   unreadable across a kitchen.
+
+  ONE SCROLL, NOT THREE FIXED BANDS. The earlier layout pinned a header, a
+  button row and a details footer, and gave the story whatever was left. Measured
+  on the real page that was 336px of furniture against 134px of story in a 486px
+  column — 69% chrome — and a three-line title with a starred note cut the story
+  to 91px, under three lines, while it was trying to show 1660 characters.
+
+  So the whole column scrolls: the work, then the story, then the catalogue data
+  underneath, which is the order a wall label uses anyway. The story now starts
+  with the full column and the details scroll into view when someone wants them.
+
+  The controls moved onto the picture. Anywhere in this column, however slim,
+  takes the space back.
 %>
-<main class="flex h-screen w-screen overflow-hidden">
+<main class="relative flex h-screen w-screen overflow-hidden">
   <% if @artwork.nil? %>
     <div class="flex h-full w-full items-center justify-center px-10 text-center">
       <p class="text-2xl text-neutral-400">
@@ -19,21 +32,61 @@
                                             format: @display.rendition_extension),
               class: "h-full w-full object-cover", alt: @artwork.display_title %>
       <% end %>
+
+      <%# Over the picture, where they cost the story nothing. Still a plain
+          same-origin form post: no CORS, no script — see SameOriginWrite for why
+          the Origin header rather than a CSRF token guards these. %>
+      <div class="absolute bottom-4 left-4 flex items-center gap-3">
+        <%# A bare arrow was not obvious: an arrow on a picture could mean the next
+            page, a bigger view, or nothing. The word carries it, and "Next" is
+            the same word the browse UI uses for the same action. The star needs
+            no label -- a star means one thing. %>
+        <%# A drawn arrow rather than the → character. Sharing a baseline was not
+            enough: the glyph is drawn on the font's maths axis, about a quarter of
+            an em above the baseline, where the optical centre of a word is nearer
+            a third — so it reads low however the box is centred, and that is a
+            font metric no layout can correct. An SVG sits exactly where it is
+            told. align-middle puts its centre on the baseline plus half the
+            x-height, which is where the eye expects it. %>
+        <%= button_to advance_display_path(@display.slug),
+            aria: { label: "Next picture" },
+            class: "flex h-16 items-center justify-center rounded-full px-6 " \
+                   "bg-neutral-950/75 text-[22px] text-neutral-100 " \
+                   "ring-1 ring-white/25 active:bg-neutral-800" do %>
+          <span>Next<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true"
+                         class="ml-2 inline-block h-[0.85em] w-[0.85em] align-middle"
+                    ><path d="M4 12h13M12.5 6.5 18 12l-5.5 5.5"/></svg></span>
+        <% end %>
+
+        <%= button_to favourite_artwork_path(@artwork.slug),
+            aria: { label: @artwork.favourite? ? "Starred, tap to unstar" : "Star this" },
+            class: "flex h-16 w-16 items-center justify-center rounded-full text-[26px] " \
+                   "ring-1 active:opacity-70 #{@artwork.favourite? ?
+                     'bg-amber-500/25 text-amber-300 ring-amber-300/50' :
+                     'bg-neutral-950/75 text-neutral-300 ring-white/25'}" do %>
+          <%= @artwork.favourite? ? "★" : "☆" %>
+        <% end %>
+      </div>
     </figure>
 
-    <div class="flex h-full min-w-0 flex-1 flex-col px-8 py-6">
-      <header class="shrink-0">
-        <h1 class="text-[34px] font-semibold leading-tight tracking-tight">
-          <%= @artwork.display_title %>
-        </h1>
-        <p class="mt-1 text-[22px] text-neutral-300">
-          <%= @artist&.name || "Artist unknown" %><%
-            %><% if @artwork.year_text.present? %><span class="text-neutral-500"> · <%= @artwork.year_text %></span><% end %>
-        </p>
-      </header>
+    <%# The entire column scrolls as one. min-h-0 so it may actually shrink
+        inside the flex row rather than growing the page. %>
+    <div class="min-w-0 flex-1 overflow-y-auto px-8 py-6">
+      <h1 class="text-[34px] font-semibold leading-tight tracking-tight">
+        <%= @artwork.display_title %>
+      </h1>
+      <p class="mt-1 text-[22px] text-neutral-300">
+        <%= @artist&.name || "Artist unknown" %><%
+          %><% if @artwork.year_text.present? %><span class="text-neutral-500"> · <%= @artwork.year_text %></span><% end %>
+      </p>
 
-      <%# The scrollable middle. Everything above and below stays put. %>
-      <div class="mt-4 min-h-0 flex-1 overflow-y-auto pr-2 text-[19px] leading-relaxed text-neutral-200">
+      <% if @artwork.favourite? %>
+        <p class="mt-2 text-[15px] text-amber-500/80">Starred, so it comes up twice as often.</p>
+      <% end %>
+
+      <div class="mt-4 text-[19px] leading-relaxed text-neutral-200">
         <% if @artwork.story.present? %>
           <%= simple_format @artwork.story, class: "mb-3" %>
         <% elsif @artwork.blurb.present? %>
@@ -63,37 +116,19 @@
         <% end %>
       </div>
 
-      <%# Reachable from the wall itself. This page is served by verso and merely
-          framed by Home Assistant, so the form posts to verso's own origin and
-          needs no CORS and no script. Sized for a finger at counter distance. %>
-      <div class="mt-4 flex shrink-0 gap-3">
-        <%= button_to "Next picture →", advance_display_path(@display.slug),
-            class: "flex-1 rounded-2xl border border-neutral-700 bg-neutral-900 " \
-                   "px-5 py-3 text-[19px] text-neutral-200 active:bg-neutral-800" %>
-
-        <%# Wide enough for a finger at counter distance, and it says what the star
-            does rather than leaving it to be guessed. %>
-        <%= button_to favourite_artwork_path(@artwork.slug),
-            class: "rounded-2xl border px-5 py-3 text-[19px] active:opacity-70 #{@artwork.favourite? ?
-              'border-amber-500 bg-amber-500/10 text-amber-400' : 'border-neutral-700 text-neutral-400'}" do %>
-          <%= @artwork.favourite? ? "★" : "☆" %>
-        <% end %>
-      </div>
-      <% if @artwork.favourite? %>
-        <p class="mt-1 shrink-0 text-[15px] text-amber-500/80">Starred, so it comes up twice as often.</p>
-      <% end %>
-
-      <footer class="mt-4 shrink-0 border-t border-neutral-800 pt-3">
+      <%# Underneath the story now, and scrolling with it. "Collection" is gone:
+          it names verso's own grouping, which is bookkeeping rather than
+          anything a person at a screen wants to read. %>
+      <footer class="mt-6 border-t border-neutral-800 pt-3 pb-2">
         <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[17px]">
           <% {
                "Where" => @artwork.current_location,
                "Medium" => @artwork.medium,
-               "Collection" => @artwork.collection.name,
                "Credit" => @artwork.credit_line
              }.each do |label, value| %>
             <% next if value.blank? %>
             <dt class="text-neutral-500"><%= label %></dt>
-            <dd class="min-w-0 truncate text-neutral-300"><%= value %></dd>
+            <dd class="min-w-0 text-neutral-300"><%= value %></dd>
           <% end %>
         </dl>
       </footer>
