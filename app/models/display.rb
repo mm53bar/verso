@@ -81,8 +81,11 @@ class Display < ApplicationRecord
   # much it is willing to crop. Cropping a ratio A to fill a screen of ratio D
   # discards (A-D)/A when A is wider and (D-A)/D when it is narrower; holding
   # both under f gives D*(1-f) .. D/(1-f).
-  def acceptable_aspect_ratios
-    slack = 1 - max_crop_fraction
+  # The shapes this panel can crop to its own, given a willingness to lose some of
+  # the picture. Defaults to the panel's own tolerance; an artwork may supply a
+  # larger one for itself — see Artwork#max_crop_fraction.
+  def acceptable_aspect_ratios(fraction = max_crop_fraction)
+    slack = 1 - fraction
     (aspect_ratio * slack)..(aspect_ratio / slack)
   end
 
@@ -113,7 +116,7 @@ class Display < ApplicationRecord
     # unknown rather than true, which silently disqualifies the whole
     # collection. Rails renders an empty `where.not` as a tautology instead.
     suitable = Artwork.eligible.merge(large_enough)
-    suitable = suitable.where(aspect_ratio: acceptable_aspect_ratios) if fill?
+    suitable = suitable.merge(croppable_to_shape) if fill?
 
     from_collections = Artwork
       .where(collection_id: collection_ids)
@@ -343,6 +346,25 @@ class Display < ApplicationRecord
     #
     # Ceil rather than floor: at 1.0 the two are identical, and above it a
     # rounded-down threshold would admit a piece that lands a pixel short.
+    # Artworks this panel can crop to its shape — by its own tolerance, or by the
+    # larger one a particular artwork claims for itself.
+    #
+    # The individual cases are resolved in Ruby and passed in as ids rather than
+    # expressed as SQL. The arithmetic is per-row, so as a query it would be a
+    # fragment computing bounds from a column, and the set is a handful of artworks
+    # somebody decided about by hand. Cheap to load, and legible.
+    def croppable_to_shape
+      Artwork.where(aspect_ratio: acceptable_aspect_ratios)
+             .or(Artwork.where(id: individually_tolerated_ids))
+    end
+
+    def individually_tolerated_ids
+      Artwork.where.not(max_crop_fraction: nil).pluck(:id, :max_crop_fraction, :aspect_ratio)
+        .filter_map do |id, fraction, ratio|
+          id if ratio.present? && acceptable_aspect_ratios(fraction).cover?(ratio)
+        end
+    end
+
     def fits_within(upscale)
       needed_width = (width / upscale).ceil
       needed_height = (height / upscale).ceil

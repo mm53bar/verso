@@ -48,6 +48,11 @@ class Artwork < ApplicationRecord
   CROP_EDGES = { "left" => :low, "top" => :low, "right" => :high, "bottom" => :high }.freeze
 
   validates :crop_focus_x, inclusion: { in: CROP_FOCUS_X }, allow_nil: true
+  # Same ceiling as a Display's: past a quarter of the picture the crop is the
+  # subject. Deliberately allowed higher here, because the point of the column is
+  # that a particular picture is worth more than the general rule.
+  validates :max_crop_fraction,
+            numericality: { greater_than_or_equal_to: 0, less_than: 1 }, allow_nil: true
   validates :crop_focus_y, inclusion: { in: CROP_FOCUS_Y }, allow_nil: true
 
   normalizes :title, with: ->(title) { title.squish.presence }
