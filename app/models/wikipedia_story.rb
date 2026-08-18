@@ -92,7 +92,11 @@ class WikipediaStory
     # The plain-text extract uses "== Heading ==" lines, so the article splits
     # into a lead followed by (heading, body) pairs.
     def build(text)
-      parts = ("\n" + text).split(/\n==+ ([^=]+?) ==+\n/)
+      # The trailing newline matters. The split needs a newline on BOTH sides of a
+      # heading, and an extract ending in "== References ==" has none after it, so
+      # the heading stayed in the lead and four stories ended with wiki markup on
+      # the wall.
+      parts = ("\n" + text + "\n").split(/\n==+ ([^=]+?) ==+\n/)
       lead = trim(parts.first.to_s.strip, LEAD_LIMIT)
       sections = parts.drop(1).each_slice(2).to_a.select { |pair| pair.length == 2 }
                       .map { |heading, body| [ heading.strip, body.strip ] }
