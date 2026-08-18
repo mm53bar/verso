@@ -43,10 +43,18 @@ class FeedsControllerTest < ActionDispatch::IntegrationTest
 
     # A client should not have to read a Content-Type -- or worse, the bytes --
     # to learn that an image is a JPEG. One of them refused it outright instead.
-    assert response.parsed_body["url"].end_with?(".jpg"),
-      "feed url gives no clue what it serves: #{response.parsed_body["url"]}"
-    assert response.parsed_body["next_url"].end_with?(".jpg"),
-      "next_url gives no clue what it serves: #{response.parsed_body["next_url"]}"
+    #
+    # The PATH is what has to end in .jpg, not the whole url: renditions carry a
+    # `v` fingerprint of their contents so that changing a crop reaches the
+    # screens. Asserting on the url entire would forbid ever adding a query
+    # string, which is not what this test is about.
+    %w[ url next_url ].each do |field|
+      published = response.parsed_body[field]
+      path = URI.parse(published).path
+
+      assert path.end_with?(".jpg"),
+        "#{field} gives no clue what it serves: #{published}"
+    end
   end
 
   test "reports how long the current piece has left, so a client can poll freely" do

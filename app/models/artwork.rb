@@ -119,6 +119,31 @@ class Artwork < ApplicationRecord
     original.variant(**display.variant_transformation(crop: crop_edge_for(display)))
   end
 
+  # A short fingerprint of the BYTES a display's rendition will have.
+  #
+  # WHY THIS EXISTS. A rendition URL names an artwork and a display and nothing
+  # else, deliberately, so that a screen is not made to re-fetch every time a
+  # variant is regenerated. That was sound while the bytes were a function of
+  # (artwork, display) — and #crop_edge_for made them a function of (artwork,
+  # display, crop focus). The invariant broke quietly and cost twenty minutes of a
+  # television showing an old crop: Home Assistant skips an upload when the
+  # artwork id matches what it last sent, and the rendition URL is served
+  # `immutable` with a year of max-age, so nothing between here and the glass had
+  # any reason to look again.
+  #
+  # Computed from the original's storage key and the transformation's own digest,
+  # which together are exactly what determines the output. Deliberately NOT the
+  # variant's checksum: that would mean generating the variant to name it, and
+  # this is called on every feed request, three clients polling every 60 seconds.
+  # Nothing here touches the disk.
+  def rendition_fingerprint(display)
+    return unless original.attached?
+
+    variation = rendition_for(display).variation
+
+    Digest::SHA256.hexdigest("#{original.blob.key}/#{variation.digest}")[0, 8]
+  end
+
   # Which edge of this artwork to keep when this display crops it, as a libvips
   # value, or nil for the default centred crop.
   #

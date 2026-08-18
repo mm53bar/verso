@@ -75,10 +75,27 @@ function of (artwork, display, crop focus):
    old image indefinitely. On this occasion Thruster happened to have cached the
    new bytes rather than the old, which is luck rather than design.
 
-The fix, not yet made: give the rendition URL a fingerprint of its own content
-(`…/television.jpg?v=<checksum prefix>`), so that the URL changes exactly when the
-bytes do — restoring the immutability claim instead of abandoning it — and have the
-Home Assistant automation compare that URL rather than the artwork id.
+**Fixed the same day.** `Artwork#rendition_fingerprint(display)` is eight hex
+characters derived from the original's storage key and the transformation's own
+digest — together exactly what determines the output — and it appears twice: as
+`?v=` on the rendition URL, so the URL changes precisely when the bytes do and the
+`immutable` header becomes true again rather than being abandoned; and as
+`rendition_version` in the feed, so a consumer can key its own idempotence on the
+image instead of on the artwork.
+
+Derived rather than read, deliberately. The obvious fingerprint is the variant's
+checksum, and taking it would mean generating the variant in order to name it — on
+every feed request, with three clients polling every 60 seconds. A test asserts
+that naming the bytes creates no variant record.
+
+`v` is a cache buster and never a condition of service. A kiosk page rendered an
+hour ago carries whatever fingerprint was current then and must still get an image,
+so the controller ignores the parameter entirely; a test pins that too.
+
+Home Assistant's side stores `rendition_version` in
+`input_text.frame_uploaded_artwork` instead of the artwork id, and triggers on that
+attribute. Its `max: 32` is why the fingerprint is short and why the URL itself was
+not used as the key.
 
 This is per-artwork data and there is no rule to derive it from. That is a real
 cost: 288 artworks, and any of them might deserve a look. Nothing forces the

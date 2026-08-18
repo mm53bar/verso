@@ -189,4 +189,28 @@ class RenditionsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert (response.headers["x-sendfile"] || response.headers["X-Sendfile"]).present?
   end
+
+  # The `v` param is a cache buster and nothing else. It must not become a
+  # condition of service: a kiosk page rendered an hour ago carries whatever
+  # fingerprint was current then, and it should still get an image rather than a
+  # 404 the moment a crop changes.
+  test "an old or absent fingerprint still serves the current bytes" do
+    current = get_bytes artwork_rendition_url(@artwork.slug, @kiosk.slug,
+                                              format: :jpg,
+                                              v: @artwork.rendition_fingerprint(@kiosk))
+    stale = get_bytes artwork_rendition_url(@artwork.slug, @kiosk.slug,
+                                            format: :jpg, v: "deadbeef")
+    bare = get_bytes artwork_rendition_url(@artwork.slug, @kiosk.slug, format: :jpg)
+
+    assert_equal current, stale
+    assert_equal current, bare
+  end
+
+  private
+    def get_bytes(url)
+      get url
+
+      assert_response :success
+      response.body.bytesize
+    end
 end

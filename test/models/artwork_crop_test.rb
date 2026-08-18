@@ -125,7 +125,59 @@ class ArtworkCropTest < ActiveSupport::TestCase
       "keeping the bottom of a dark-topped picture should be visibly brighter"
   end
 
+  # ---- the fingerprint that carries a crop change to the screens ----
+
+  test "the fingerprint changes when the crop changes" do
+    attach_image(@tall)
+    before = @tall.rendition_fingerprint(@television)
+    @tall.update!(crop_focus_y: "bottom")
+    after = @tall.rendition_fingerprint(@television)
+
+    assert_not_equal before, after,
+      "nothing downstream can notice a new crop if this does not move"
+  end
+
+  test "the fingerprint is stable when nothing about the image changed" do
+    attach_image(@tall)
+    @tall.update!(crop_focus_y: "bottom")
+    first = @tall.rendition_fingerprint(@television)
+    @tall.update!(title: "Renamed, but the same picture")
+
+    assert_equal first, @tall.rendition_fingerprint(@television),
+      "a stable url is the point; this must not churn on unrelated edits"
+  end
+
+  test "the fingerprint differs per display, because the bytes do" do
+    attach_image(@tall)
+
+    assert_not_equal @tall.rendition_fingerprint(@kiosk),
+      @tall.rendition_fingerprint(@television)
+  end
+
+  test "an artwork with no image has no fingerprint" do
+    assert_nil artworks(:cartoon).rendition_fingerprint(@television)
+  end
+
+  # THE REASON IT IS DERIVED RATHER THAN READ.
+  # This runs on every feed request, and three clients poll every 60 seconds.
+  # Naming the bytes by their checksum would mean generating the variant first,
+  # which on this collection means minutes of libvips on a cold cache.
+  test "naming the bytes does not generate them" do
+    artwork = artworks(:native_4k)
+    artwork.original.attach(io: two_tone_image, filename: "two_tone.jpg",
+                            content_type: "image/jpeg")
+
+    assert_no_difference -> { ActiveStorage::VariantRecord.count } do
+      assert_not_nil artwork.rendition_fingerprint(@television)
+    end
+  end
+
   private
+    def attach_image(artwork)
+      artwork.original.attach(io: file_fixture("landscape.jpg").open,
+                              filename: "landscape.jpg", content_type: "image/jpeg")
+    end
+
     # 2000x4000, black on top and near-white below, so which half survived a
     # vertical crop is unambiguous from a single number.
     def two_tone_image
