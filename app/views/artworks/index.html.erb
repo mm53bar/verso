@@ -9,7 +9,7 @@
     <%= link_to artwork_path(@current), class: "shrink-0" do %>
       <div class="aspect-[16/10] w-36 overflow-hidden rounded bg-neutral-100">
         <% if @current.original.attached? %>
-          <%= image_tag @current.thumbnail, width: 480, height: 300,
+          <%= image_tag artwork_variant_url_for(@current, :thumb), width: 480, height: 300,
               decoding: "async", class: "h-full w-full object-cover" %>
         <% end %>
       </div>
@@ -84,7 +84,7 @@
           <%= link_to artwork_path(artwork), class: "group block" do %>
             <div class="aspect-[16/10] overflow-hidden rounded bg-neutral-100">
               <% if artwork.original.attached? %>
-                <%= image_tag artwork.thumbnail, loading: "lazy", decoding: "async",
+                <%= image_tag artwork_variant_url_for(artwork, :thumb), loading: "lazy", decoding: "async",
                     width: 480, height: 300, class: "h-full w-full object-cover" %>
               <% end %>
             </div>

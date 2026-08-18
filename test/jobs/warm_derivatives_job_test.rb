@@ -66,12 +66,20 @@ class WarmDerivativesJobTest < ActiveSupport::TestCase
     end
   end
 
-  test "the thumbnail is a named variant, so view and warmer cannot drift apart" do
-    # Naming it is what guarantees they ask for the identical transformation. An
+  test "view, controller and warmer all name the same sizes and cannot drift apart" do
+    # Naming is what guarantees they ask for the identical transformation. An
     # inline hash in the view and another in the warmer would be two cache keys
     # that look the same, and the index would stay slow while appearing fixed.
-    assert_includes Artwork.reflect_on_attachment(:original).named_variants.keys, :thumb
-    assert_includes File.read(Rails.root.join("app/views/artworks/index.html.erb")), "artwork.thumbnail"
+    #
+    # The chain is: the view asks for a size by name, the controller refuses any
+    # name that is not declared, and the warmer warms every declared name. Break
+    # any link and the index serves something nothing warmed.
+    declared = Artwork.reflect_on_attachment(:original).named_variants.keys.map(&:to_s).sort
+
+    assert_equal declared, RenditionsController::NAMED_VARIANTS.sort,
+      "the controller serves a size Artwork does not declare, or refuses one it does"
+    assert_includes File.read(Rails.root.join("app/views/artworks/index.html.erb")),
+      "artwork_variant_url_for"
   end
 
   test "attaching an original preprocesses the thumbnail without being asked" do

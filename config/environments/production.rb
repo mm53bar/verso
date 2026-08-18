@@ -24,6 +24,29 @@ Rails.application.configure do
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local
 
+  # HAND THE PROXY A FILENAME, NEVER THE BYTES.
+  # Thruster runs in this container as the entrypoint wrapping `rails server`, so
+  # it and Puma share a filesystem and a path means the same thing to both. With
+  # this set, Rack::Sendfile rewrites any response whose body came from
+  # `send_file` into an empty body plus `X-Sendfile: /path`, and Thruster serves
+  # the file itself with sendfile(2). Puma's thread is released as soon as the
+  # headers are written, whether the file is 50KB or 700MB.
+  #
+  # Measured before this on the browse index: thumbnails served by Ruby ran to a
+  # p90 of 516ms and a worst case of 2.4 seconds for a 40KB image, while the
+  # controller that does not stream moved 2.3MB in a flat 165ms. The cost was
+  # never the bytes, it was Ruby being in the path at all.
+  #
+  # ONLY `send_file` IS ACCELERATED. Rack::Sendfile acts on bodies that respond
+  # to `to_path`; `send_data` hands it a String and is left alone. Whatever is
+  # served this way must therefore exist as a real file — true for Active Storage
+  # variants under the Disk service, and checked at runtime rather than assumed
+  # (see RenditionsController#disk_path_for).
+  #
+  # Development and test leave this unset on purpose: there is no proxy there to
+  # honour the header, and Rack::Sendfile would blank the body.
+  config.action_dispatch.x_sendfile_header = "X-Sendfile"
+
   # Assume all access to the app is happening through a SSL-terminating reverse proxy.
   config.assume_ssl = true
 

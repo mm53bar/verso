@@ -22,6 +22,19 @@ Rails.application.routes.draw do
   get "artworks/:artwork_slug/renditions/:display_slug" => "renditions#show",
       as: :artwork_rendition
 
+  # The browse UI's images, on the same terms as a rendition: addressed by
+  # artwork and size, not by storage key.
+  #
+  # These used to be Active Storage proxy URLs, generated straight from
+  # `image_tag artwork.thumbnail`. Two things were wrong with that. The URL
+  # carried a signed variant key, so regenerating a variant changed every URL on
+  # the page -- the brief warned about precisely this. And Active Storage's proxy
+  # controller includes ActionController::Live: measured on the index, a 40KB
+  # thumbnail had a p90 of 516ms and a tail of 2.4s, against a flat 165ms for
+  # 2.3MB through the controller that does not stream.
+  get "artworks/:artwork_slug/variants/:variant" => "renditions#variant",
+      as: :artwork_variant, constraints: { variant: /thumb|tile|detail/ }
+
   # Choosing a picture by hand, and stepping the rotation on. Both are ordinary
   # same-origin form posts rather than anything scripted, which is what keeps
   # them off the CORS surface entirely — see

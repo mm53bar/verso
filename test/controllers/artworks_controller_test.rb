@@ -41,4 +41,25 @@ class ArtworksControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_select "body", /Not eligible for any screen/
   end
+
+  # THE INDEX IS A GRID OF IMAGES, SO ITS IMAGE URLS ARE ITS PERFORMANCE.
+  # These used to be Active Storage proxy URLs, which cost twice: the URL embeds
+  # a signed variant key, so regenerating a variant changes every URL on the
+  # page, and the proxy controller streams through ActionController::Live, which
+  # measured a p90 of 516ms and a 2.4s tail for a 40KB thumbnail. Going back to
+  # `image_tag artwork.thumbnail` is a one-word change that reintroduces both
+  # silently, because the page still looks right.
+  test "the index serves its images from this app, not from Active Storage's proxy" do
+    artworks(:native_4k).original.attach(
+      io: file_fixture("wide.jpg").open, filename: "wide.jpg", content_type: "image/jpeg"
+    )
+
+    get root_path
+
+    assert_response :success
+    assert_no_match %r{/rails/active_storage/}, response.body,
+      "an Active Storage URL embeds a variant key and streams through Live"
+    assert_match %r{/artworks/[\w-]+/variants/thumb\.jpg}, response.body,
+      "thumbnails should be addressed by artwork and size"
+  end
 end
