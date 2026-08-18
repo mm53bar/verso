@@ -4,9 +4,34 @@
 #   Ensure the SQLite 3 gem is defined in your Gemfile
 #   gem "sqlite3"
 #
+# ONE REQUEST IS NOT ONE CONNECTION, AND SIZING THE POOL AS IF IT WERE TAKES THE
+# APP DOWN. The stock Rails line here is `max_connections: RAILS_MAX_THREADS`,
+# which assumes a Puma thread checks out one connection for the length of a
+# request. Two things in this app break that assumption:
+#
+#   1. Active Storage's proxy controller includes `ActionController::Live`
+#      (activestorage/app/controllers/concerns/active_storage/streaming.rb), so
+#      it hands the response body to a SECOND thread, wrapped in the Rails
+#      executor, which checks out a connection of its own. Every in-flight
+#      thumbnail therefore holds TWO. The browse index is a grid of proxied
+#      thumbnails, so a single page load is a burst of them.
+#   2. Solid Queue runs inside Puma (config/puma.rb), not in a worker container.
+#      Its supervisor, dispatcher, scheduler and worker threads all draw from
+#      this same pool.
+#
+# Observed 2026-08-17 with threads 8 and pool 8: loading the browse index fired
+# twelve concurrent thumbnail requests, eight Puma threads each took a
+# connection and then blocked waiting for a second one that could not exist, and
+# the app deadlocked. Not one of those twelve requests ever logged a Completed
+# line, and for the next thirty seconds every request — including both screens'
+# feeds — returned 500 ConnectionTimeoutError.
+#
+# The bound is Puma's thread count, not the size of the burst: excess requests
+# queue in Puma without holding a connection. So threads * 2 covers the
+# streaming worst case exactly, and the constant covers Solid Queue.
 default: &default
   adapter: sqlite3
-  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  max_connections: <%= ENV.fetch("RAILS_MAX_CONNECTIONS") { Integer(ENV.fetch("RAILS_MAX_THREADS", 5)) * 2 + 6 } %>
   timeout: 5000
 
 development:
