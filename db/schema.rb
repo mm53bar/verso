@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_210918) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_140000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -59,6 +59,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_210918) do
     t.integer "collection_id", null: false
     t.datetime "created_at", null: false
     t.string "credit_line"
+    t.string "crop_focus_x"
+    t.string "crop_focus_y"
     t.string "current_location"
     t.boolean "favourite", default: false, null: false
     t.integer "height"

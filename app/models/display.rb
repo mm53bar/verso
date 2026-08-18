@@ -226,9 +226,19 @@ class Display < ApplicationRecord
   # letterboxing. Shrinking the artwork into a smaller box first and then
   # centring it on the full panel leaves a margin on all four sides, which is a
   # mount board.
-  def variant_transformation
+  # `crop` names the edge to keep when something has to be discarded, and it goes
+  # INSIDE resize_to_fill's argument list rather than alongside it. Every top-level
+  # key in a transformation is applied as its own image operation, so a stray
+  # `crop:` here calls libvips' crop, which wants x, y, width and height and fails
+  # with "you supplied 2 arguments, but operation needs 5".
+  #
+  # Left nil, the arguments are byte-identical to what they were before this
+  # existed, which is what keeps every already-generated variant key valid.
+  def variant_transformation(crop: nil)
     unless contain?
-      return { resize_to_fill: [ width, height ], format: :jpeg, saver: { quality: 88 } }
+      fill = crop ? [ width, height, { crop: crop } ] : [ width, height ]
+
+      return { resize_to_fill: fill, format: :jpeg, saver: { quality: 88 } }
     end
 
     return { resize_and_pad: [ width, height, { background: matte_rgb, alpha: false } ],

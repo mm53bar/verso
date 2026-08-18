@@ -38,6 +38,18 @@ class Artwork < ApplicationRecord
 
   validates :weight, numericality: { greater_than: 0 }
 
+  # Named for the picture rather than for libvips. Its `crop:` option says "keep
+  # the low edge" or "keep the high edge" of whichever axis is being cropped,
+  # which is correct and unreadable: `low` is the top when the crop is vertical
+  # and the left when it is horizontal. Storing top/bottom and left/right keeps
+  # the intent legible in the database, and CROP_EDGES translates in one place.
+  CROP_FOCUS_X = %w[ left centre right ].freeze
+  CROP_FOCUS_Y = %w[ top centre bottom ].freeze
+  CROP_EDGES = { "left" => :low, "top" => :low, "right" => :high, "bottom" => :high }.freeze
+
+  validates :crop_focus_x, inclusion: { in: CROP_FOCUS_X }, allow_nil: true
+  validates :crop_focus_y, inclusion: { in: CROP_FOCUS_Y }, allow_nil: true
+
   normalizes :title, with: ->(title) { title.squish.presence }
 
   before_save :derive_aspect_ratio
@@ -101,8 +113,32 @@ class Artwork < ApplicationRecord
   # depending on what that screen is for. Generated on demand and cached by
   # Active Storage; the URL a client sees must not embed the variant key, or
   # regenerating it would make a screen swap for no reason.
+  # The display decides the shape; the artwork decides which part of itself to
+  # give up to reach it. See #crop_option.
   def rendition_for(display)
-    original.variant(**display.variant_transformation)
+    original.variant(**display.variant_transformation(crop: crop_edge_for(display)))
+  end
+
+  # Which edge of this artwork to keep when this display crops it, as a libvips
+  # value, or nil for the default centred crop.
+  #
+  # NIL RATHER THAN :centre, and that is not a style choice. The transformation
+  # hash *is* the Active Storage variant key, so spelling out the default would
+  # change the key of every rendition in the collection and regenerate all of them
+  # to produce byte-identical images. Returning nil means this feature cannot
+  # alter a single artwork that has not opted in.
+  #
+  # Which axis matters is computed, not stored. Cropping to fill only ever
+  # discards from the axis the artwork has too much of, so a piece wider than the
+  # panel loses its sides and a taller one loses its top and bottom — and exactly
+  # one of the two stored preferences can ever apply.
+  def crop_edge_for(display)
+    return unless display.fill?
+    return if aspect_ratio.blank?
+
+    focus = aspect_ratio > display.aspect_ratio ? crop_focus_x : crop_focus_y
+
+    CROP_EDGES[focus]
   end
 
   # True when this piece can *fill* the display without being upscaled. Cropping
