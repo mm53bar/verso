@@ -57,6 +57,29 @@ Setting a focus on an artwork that already has renditions **does** re-key that
 artwork's own variants, which is the point, but it means the new rendition is cold
 and wants warming before a screen asks for it.
 
+**AND NOTHING DOWNSTREAM NOTICES, WHICH THIS ADR ORIGINALLY FAILED TO SAY.**
+Observed within the hour, on the wall: the crop was changed, the rendition was
+regenerated, verso served the new bytes, and the television went on showing the old
+picture. Two independent reasons, both following from the same broken invariant —
+a rendition's bytes used to be a function of (artwork, display) and are now a
+function of (artwork, display, crop focus):
+
+1. **Home Assistant's upload is idempotent on the artwork id.** It stores what it
+   last uploaded in `input_text.frame_uploaded_artwork` and skips when that equals
+   the feed's current value. Both were `292`, so it correctly concluded the
+   television was already right. That idempotence is load-bearing — it is what
+   makes a failed upload retry for free — so the fix is not to remove it but to key
+   it on something that changes when the bytes change.
+2. **The rendition URL is served `Cache-Control: immutable, max-age=1 year`**,
+   which is now a false promise. Any cache between verso and a screen may hold the
+   old image indefinitely. On this occasion Thruster happened to have cached the
+   new bytes rather than the old, which is luck rather than design.
+
+The fix, not yet made: give the rendition URL a fingerprint of its own content
+(`…/television.jpg?v=<checksum prefix>`), so that the URL changes exactly when the
+bytes do — restoring the immutability claim instead of abandoning it — and have the
+Home Assistant automation compare that URL rather than the artwork id.
+
 This is per-artwork data and there is no rule to derive it from. That is a real
 cost: 288 artworks, and any of them might deserve a look. Nothing forces the
 issue, since the default remains a centred crop.
