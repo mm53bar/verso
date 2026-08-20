@@ -50,6 +50,13 @@ Rails.application.routes.draw do
   # Separate from the browse UI on purpose — see the controller.
   get "kiosk/:display_slug" => "kiosk#show", as: :kiosk
 
+  # Operator settings. The schedule is per screen because it always was — it is a
+  # column on Display — so this edits Display rows rather than a settings
+  # singleton. It exists so that changing when a screen rotates does not mean
+  # editing db/seeds.rb and deploying.
+  get "settings" => "settings#show", as: :settings
+  patch "displays/:display_slug/schedule" => "displays#update_schedule", as: :display_schedule
+
   root "artworks#index"
   resources :artworks, only: %i[ index show ]
   resources :displays, only: %i[ index show ]

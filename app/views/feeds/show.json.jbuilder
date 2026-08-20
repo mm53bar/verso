@@ -1,5 +1,5 @@
 json.display @display.slug
-json.cycle_seconds @display.cycle_seconds
+json.cycle_seconds @display.cadence_seconds
 json.seconds_remaining @seconds_remaining
 
 if @artwork

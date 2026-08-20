@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_18_160000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_19_210000) do
   create_table "active_storage_attachments", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", null: false
@@ -148,6 +148,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_18_160000) do
     t.string "name", null: false
     t.integer "next_artwork_id"
     t.string "render_mode", default: "fill", null: false
+    t.string "rotate_at"
     t.datetime "round_started_at"
     t.string "slug", null: false
     t.datetime "updated_at", null: false

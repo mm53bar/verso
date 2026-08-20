@@ -54,18 +54,26 @@ collections = {
   [ name, collection ]
 end
 
-# Two screens, two shapes, ONE rotation. The kiosk leads and the television
-# follows, so both rooms show the same picture at the same time — which is what
-# makes noticing a painting on the TV and reading about it on the kiosk work.
+# Two screens, two shapes, two clocks. Both crop to fill — see
+# docs/adr/20260817-fit-the-screen-not-the-art.md, which reversed the matting the
+# television briefly had.
 #
-# They render it differently, and deliberately:
+# They ran as ONE rotation until 2026-08-19: the kiosk led, the television
+# followed, and both rooms showed the same picture, so noticing a painting on the
+# TV and reading about it on the kiosk worked. What ended that is not a change of
+# mind about the idea. Delivering an artwork to a Frame TV takes it out of
+# whatever is on screen and switches it to art mode, so an hourly rotation
+# interrupted a show hourly. The television now changes once a day overnight, and
+# "once a day at 3am" cannot be said as an interval at all — see
+# docs/adr/20260819-a-clock-for-the-television.md.
 #
-#   kiosk      fill    — it is a dashboard background behind a clock, and matte
-#                        bars there would read as a broken image.
-#   television contain — it is pretending to be a hanging painting. Cropping a
-#                        Group of Seven sketch panel to 16:9 discards a third of
-#                        the picture. Matting instead took the set both screens
-#                        can share from 76 artworks to 117.
+# SCHEDULE FIELDS ARE SEEDED ONCE AND NEVER RE-SEEDED. cycle_seconds, rotate_at
+# and follows_display are assigned here only when the row is created, because
+# they are editable at /settings and this file runs on every deploy.
+# max_crop_fraction below is the standing example of what the other arrangement
+# costs: a reviewed figure that a re-seed silently restores to whatever is
+# written here.
+
 # Sized to the panel, not above it. The Echo Show 8 is physically 1280x800 (a
 # CSS viewport of 854x534 at dpr 1.5), so a 1920x1200 rendition was 1049KB where
 # 1280x800 is 450KB — 2.3x the bytes for pixels the device cannot display, sent
@@ -74,15 +82,23 @@ end
 # A screen of a different size is a new row, not a new size here: an Echo Show 5
 # is 960x480, a different aspect ratio again, and gets its own Display.
 kiosk = Display.find_or_initialize_by(slug: "kiosk-panel")
+kiosk.assign_attributes(cycle_seconds: 1.hour.to_i) if kiosk.new_record?
 kiosk.update!(
   name: "Kiosk panel", width: 1280, height: 800,
-  cycle_seconds: 1.hour.to_i, delivery: "http", render_mode: "fill", active: true
+  delivery: "http", render_mode: "fill", active: true
 )
 
 television = Display.find_or_initialize_by(slug: "television")
+if television.new_record?
+  # Overnight, and on the wall clock rather than on an interval: a television is
+  # watched at particular hours, so WHEN it changes is the requirement. Nobody is
+  # watching at 3am, and an anchored time cannot drift into the evening the way a
+  # 24 hour interval measured from the last change does.
+  television.assign_attributes(cycle_seconds: 1.day.to_i, rotate_at: "03:00",
+                               follows_display: nil)
+end
 television.update!(
   name: "Television", width: 3840, height: 2160,
-  cycle_seconds: 1.hour.to_i,
   # Crops, and its aspect window is what decides the whole collection, because
   # the kiosk may only pick what this screen can also render. 0.20 is at most a
   # fifth of the picture discarded, so 10% off each edge.
@@ -120,14 +136,17 @@ television.update!(
   # the rendition URL like any other client — so there is no shared filesystem,
   # no rename() dance, and both screens are ordinary subscribers to one feed.
   # `file` delivery is still supported; nothing here uses it.
-  delivery: "http", file_path: nil, active: true,
-  follows_display: kiosk
+  delivery: "http", file_path: nil, active: true
 )
 
-# Both screens carry everything. Because the leader may only pick what its
-# followers can also render, what actually reaches a screen is decided by
-# whether the picture is big enough — not by curation lists pulling in two
-# directions.
+# Both screens carry everything. What actually reaches a screen is decided by
+# whether the picture suits that panel — computed, per display — and not by
+# curation lists pulling in two directions.
+#
+# Each screen now chooses for itself, so each gets the whole set it can render
+# rather than the intersection the follow arrangement forced. The kiosk clears 276
+# of 289 on its own where the shared set was 214, and those 62 extra pieces are
+# ones the 4K panel is simply too large for.
 
 # How often a collection comes up, per screen. This is the ONLY weight that acts
 # on a collection: Display#weight_for multiplies an artwork's own weight by the
@@ -147,9 +166,8 @@ COLLECTION_WEIGHTS = { "Cartoons" => 2 }.freeze
 [ kiosk, television ].each do |display|
   collections.each do |name, collection|
     pairing = DisplayCollection.find_or_initialize_by(display: display, collection: collection)
-    # Set on both screens, though only the leader's is consulted — a follower is
-    # told what to show. If the television ever led, it should not silently
-    # change what comes up.
+    # Set on both screens, and consulted on both: each one picks its own artwork
+    # now, so each one weighs the collections itself.
     pairing.update!(weight: COLLECTION_WEIGHTS.fetch(name, 1))
   end
 end

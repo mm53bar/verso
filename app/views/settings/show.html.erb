@@ -1,0 +1,84 @@
+<% content_for :title, "Settings" %>
+
+<h1 class="text-3xl font-semibold tracking-tight">Settings</h1>
+<p class="mt-2 max-w-2xl text-sm text-neutral-600">
+  When each screen changes, and whether it decides for itself. Saved here rather
+  than in <code>db/seeds.rb</code>, so a change takes effect on the next tick of
+  the rotation job instead of on the next deploy — and so a re-seed cannot undo it.
+</p>
+
+<%# The zone is spelled out because "3am" is meaningless without it, and the
+    container's TZ is the kind of thing that is wrong for months in silence. %>
+<p class="mt-1 text-sm text-neutral-500">
+  Times are <%= Time.zone.name %>, currently <%= Time.current.strftime("%H:%M") %>.
+</p>
+
+<div class="mt-8 space-y-8">
+  <% @displays.each do |display| %>
+    <section class="rounded border p-5">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 class="text-lg font-medium">
+          <%= link_to display.name, display_path(display), class: "hover:underline" %>
+        </h2>
+        <p class="text-xs text-neutral-500">
+          <%= display.width %>×<%= display.height %> ·
+          <%= display.render_mode %> ·
+          <%= display.delivery %> ·
+          <%= display.schedule_description %>
+        </p>
+      </div>
+
+      <p class="mt-1 text-xs text-neutral-500">
+        <%= @eligible[display.id] %> eligible
+        <% if @eligible[display.id] != @own_eligible[display.id] %>
+          — <%= @own_eligible[display.id] %> on its own, the rest ruled out by the
+          screens it leads, since it may only pick what they can also render
+        <% end %>
+        · next change
+        <%= display.next_rotation_at.strftime("%b %-d, %H:%M") %>
+      </p>
+
+      <%= form_with model: display, url: display_schedule_path(display.slug), method: :patch,
+                    class: "mt-4 space-y-3 text-sm" do |form| %>
+        <label class="flex flex-wrap items-center gap-2">
+          <%= radio_button_tag "display[schedule_kind]", "interval", !display.daily?,
+                id: "#{display.slug}-interval" %>
+          <span>Every</span>
+          <%= form.select :cycle_seconds,
+                options_for_select(
+                  (Display::CYCLE_CHOICES | [ display.cycle_seconds ]).sort.map { |seconds|
+                    [ ActiveSupport::Duration.build(seconds).inspect, seconds ]
+                  }, display.cycle_seconds),
+                {}, class: "rounded border px-2 py-1" %>
+          <span class="text-neutral-500">counted from the last change</span>
+        </label>
+
+        <label class="flex flex-wrap items-center gap-2">
+          <%= radio_button_tag "display[schedule_kind]", "daily", display.daily?,
+                id: "#{display.slug}-daily" %>
+          <span>Once a day at</span>
+          <%= form.time_field :rotate_at, value: display.rotate_at, step: 60,
+                class: "rounded border px-2 py-1" %>
+          <span class="text-neutral-500">on the wall clock, so it cannot drift</span>
+        </label>
+
+        <label class="flex flex-wrap items-center gap-2">
+          <span>Rotation</span>
+          <%= form.select :follows_display_id,
+                options_for_select(
+                  [ [ "decided by this screen", "" ] ] +
+                    @displays.reject { |other| other.id == display.id }
+                             .map { |other| [ "mirrors #{other.name}", other.id ] },
+                  display.follows_display_id),
+                {}, class: "rounded border px-2 py-1" %>
+          <span class="text-neutral-500">
+            a screen that mirrors another keeps that screen's schedule, and the
+            times above stop applying to it
+          </span>
+        </label>
+
+        <%= form.submit "Save", class: "rounded bg-neutral-900 px-3 py-1.5 text-sm text-white" %>
+      <% end %>
+    </section>
+  <% end %>
+</div>

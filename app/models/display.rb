@@ -11,6 +11,12 @@ class Display < ApplicationRecord
   # `contain` scales the whole picture in and mattes the rest.
   RENDER_MODES = %w[ fill contain ].freeze
 
+  # Offered by the settings screen. Deliberately not a validation — any positive
+  # number of seconds is a legal interval, and a row already holding an odd one
+  # keeps it. These are the ones anyone actually asks for.
+  CYCLE_CHOICES = [ 5.minutes, 15.minutes, 30.minutes, 1.hour, 2.hours, 4.hours,
+                    6.hours, 12.hours, 1.day ].map(&:to_i).freeze
+
   belongs_to :current_artwork, class_name: "Artwork", optional: true
   belongs_to :next_artwork,    class_name: "Artwork", optional: true
 
@@ -38,8 +44,21 @@ class Display < ApplicationRecord
   validates :max_crop_fraction,
             numericality: { greater_than_or_equal_to: 0, less_than: 1 }
   validate :file_path_stays_within_delivery_root, if: -> { file_path.present? }
+  # A time of day, 24-hour, in the app's zone. Null means the screen runs on
+  # cycle_seconds instead, which is what every screen did before this existed.
+  validates :rotate_at, format: { with: /\A([01]\d|2[0-3]):[0-5]\d\z/,
+                                  message: "must be a time of day like 03:00" },
+            allow_nil: true
 
   normalizes :name, with: ->(name) { name.squish }
+  # An <input type="time"> submits "03:00" or "03:00:00" depending on the
+  # browser, and a person typing it leaves off the leading zero. All three name
+  # the same minute. Anything that is not a time is left alone rather than
+  # coerced, so the validation above rejects it instead of it becoming midnight.
+  normalizes :rotate_at, with: ->(value) {
+    match = value.to_s.strip.match(/\A(\d{1,2}):(\d{2})(?::\d{2})?\z/)
+    match ? format("%02d:%02d", match[1].to_i, match[2].to_i) : value.presence
+  }
 
   scope :active, -> { where(active: true) }
 
@@ -53,6 +72,65 @@ class Display < ApplicationRecord
 
   # A follower shows what its leader shows and keeps the leader's schedule.
   def follower? = follows_display_id.present?
+
+  # This screen changes on the wall clock rather than on a stopwatch.
+  def daily? = rotate_at.present?
+
+  # Whose schedule governs this screen. A follower has none of its own — it moves
+  # when its leader does — so its own cycle_seconds is a number nothing acts on,
+  # and reporting it to a client is a figure the client cannot check.
+  def rotation_clock = follower? ? follows_display : self
+
+  # The most recent time this screen was supposed to change, in the app's zone.
+  #
+  # Computed from the wall clock every time rather than counted forward from the
+  # last change, which is the whole reason this is not simply a cycle_seconds of
+  # 86400. The rotation job ticks once a minute, so an interval-driven daily
+  # screen lands up to a minute late and then sets its next deadline from there:
+  # the error compounds, and a change asked for at 3am walks into the evening
+  # over a year. An anchor cannot drift, and it self-corrects — if verso is down
+  # at 3am and back at 5am the screen changes at 5am rather than skipping a day.
+  #
+  # TimeWithZone arithmetic on purpose: 1.day moves the wall clock, so the two
+  # days a year that are not 86400 seconds long still change at 3am.
+  def last_rotation_anchor(now: Time.current)
+    local = now.in_time_zone
+    todays = local.change(hour: rotate_hour, min: rotate_minute)
+
+    todays <= local ? todays : todays - 1.day
+  end
+
+  # When this screen next changes. `now` when it is already overdue, so a client
+  # that polls at the wrong moment is told to expect a change rather than to wait.
+  def next_rotation_at(now: Time.current)
+    clock = rotation_clock
+    return now if clock.current_since.nil?
+
+    return clock.current_since + clock.cycle_seconds unless clock.daily?
+
+    anchor = clock.last_rotation_anchor(now: now)
+    clock.current_since < anchor ? now : anchor + 1.day
+  end
+
+  def seconds_remaining(now: Time.current)
+    [ (next_rotation_at(now: now) - now).ceil, 0 ].max
+  end
+
+  # How long a piece is up for. A daily screen has no interval to report and a
+  # day is the honest answer; cycle_seconds on such a row is left over.
+  def cadence_seconds
+    clock = rotation_clock
+    clock.daily? ? 1.day.to_i : clock.cycle_seconds
+  end
+
+  # This screen's schedule, as a person would say it. One sentence covering all
+  # three cases, so no view has to work out which of them applies.
+  def schedule_description
+    return "mirrors #{follows_display.name}" if follower?
+    return "once a day at #{rotate_at}" if daily?
+
+    "every #{ActiveSupport::Duration.build(cycle_seconds).inspect}"
+  end
 
   # Where the rotation job actually writes. `file_path` is stored relative to
   # the configured delivery root so that an operator can put the directory
@@ -71,8 +149,15 @@ class Display < ApplicationRecord
   # A follower is never due on its own account: it changes when its leader does,
   # so letting it advance independently is exactly how the two screens would
   # drift apart.
+  #
+  # Two kinds of schedule, and they answer different questions. An interval asks
+  # how long a picture stays up, which is what a dashboard background wants. An
+  # anchor asks what time of day the picture changes, which is what a television
+  # wants, because a television is watched at particular hours and being
+  # interrupted is the whole complaint.
   def due?(now: Time.current)
     return false if follower?
+    return current_since.nil? || current_since < last_rotation_anchor(now: now) if daily?
 
     current_since.nil? || current_since + cycle_seconds <= now
   end
@@ -342,6 +427,9 @@ class Display < ApplicationRecord
   end
 
   private
+    def rotate_hour = rotate_at.to_s.split(":").first.to_i
+    def rotate_minute = rotate_at.to_s.split(":").last.to_i
+
     # Artworks this panel can render when they may be enlarged up to `upscale`.
     #
     # Ceil rather than floor: at 1.0 the two are identical, and above it a

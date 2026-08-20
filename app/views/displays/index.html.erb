@@ -8,7 +8,7 @@
       <%= link_to display.name, display_path(display), class: "font-medium hover:underline" %>
       <p class="mt-1 text-xs text-neutral-500">
         <%= display.width %>×<%= display.height %> ·
-        every <%= distance_of_time_in_words(display.cycle_seconds) %> ·
+        <%= display.schedule_description %> ·
         <%= display.delivery %>
       </p>
       <% if display.current_artwork %>

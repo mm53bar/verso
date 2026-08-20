@@ -10,18 +10,12 @@ class FeedsController < ApplicationController
     @artwork = @display.current_artwork
     @next_artwork = @display.next_artwork
 
-    # The clock lives here, so a client can poll on any schedule it likes and
-    # still know how long the current piece has left.
-    @seconds_remaining = seconds_remaining
+    # The clock lives in the Display, because there are two kinds of it — an
+    # interval and a time of day — and a client should not have to know which.
+    # It asks how long the current piece has left and is told, on any schedule it
+    # likes to poll on.
+    @seconds_remaining = @display.seconds_remaining
 
     fresh_when(etag: [ @display, @artwork, @next_artwork ], last_modified: @display.current_since)
   end
-
-  private
-    def seconds_remaining
-      return 0 if @display.current_since.nil?
-
-      elapsed = Time.current - @display.current_since
-      [ (@display.cycle_seconds - elapsed).ceil, 0 ].max
-    end
 end

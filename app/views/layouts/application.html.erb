@@ -29,6 +29,7 @@
         <%= link_to "verso", root_path, class: "text-lg font-semibold tracking-tight" %>
         <%= link_to "Collection", artworks_path, class: "text-sm text-neutral-600 hover:underline" %>
         <%= link_to "Screens", displays_path, class: "text-sm text-neutral-600 hover:underline" %>
+        <%= link_to "Settings", settings_path, class: "text-sm text-neutral-600 hover:underline" %>
       </nav>
     </header>
 
@@ -38,6 +39,14 @@
       <% if flash[:notice].present? %>
         <p class="mb-6 rounded border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm">
           <%= flash[:notice] %>
+        </p>
+      <% end %>
+
+      <%# A setting can be refused, unlike choosing a picture, so a rejection has
+          somewhere to appear instead of looking like a save that worked. %>
+      <% if flash[:alert].present? %>
+        <p class="mb-6 rounded border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-900">
+          <%= flash[:alert] %>
         </p>
       <% end %>
 
