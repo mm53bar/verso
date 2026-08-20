@@ -42,6 +42,32 @@ time. Nothing forces it, and the honest signal is the count: if it ever holds mo
 than a dozen rows, the television's own figure is probably wrong and should be
 raised instead.
 
+**That signal fired within the day, and the answer was to raise the figure.** All
+36 candidates were reviewed as pairs — the whole painting with its discarded bands
+shaded, beside the frame the television would show — and 31 were kept. Hand-setting
+31 tolerances would have been the wrong shape. What went in instead:
+
+- **The television's own tolerance to 0.254**, chosen to sit in the 0.23 point gap
+  between the worst approved crop (The Anatomy Lesson, 25.33%) and the next refused
+  one (The Old Musician, 25.64%). That covers 24 of the 31 with no per-artwork rows
+  at all.
+- **Seven tolerances** for the kept pieces above it, from The Fortune Teller at
+  0.26 to Falls, Montreal River at 0.30. Nine rows in total with the two from
+  earlier, which is under the dozen.
+- **Two `display_overrides`** for refusals that fall *below* the new policy and so
+  had to be said out loud: a Calvin and Hobbes strip, where cropping 22.6% cuts a
+  panel, and A Bar at the Folies-Bergère. The other three refusals needed nothing,
+  being above the policy already.
+
+The rotation went from 183 to 214.
+
+**The refusals are scattered through the range rather than sitting above a line**,
+and that is the durable finding. 29.7% ruins Liberty Leading the People while 30.9%
+leaves The Night Watch intact, because the question is whether the discarded strips
+carry any of the composition. So this number cannot be raised again on argument;
+it takes another review. Which is why the contact sheet exists and why the policy
+is a reviewed figure rather than a round one.
+
 ## Alternatives considered
 
 **Raise the television's `max_crop_fraction`.** The policy change described above.

@@ -97,7 +97,23 @@ television.update!(
   # returned 26 famous paintings already in the collection -- Nighthawks,
   # Primavera, Ophelia, the Grande Jatte -- and four Group of Seven works, at no
   # cost but a warm pass. See docs/adr/20260817-fit-the-screen-not-the-art.md.
-  render_mode: "fill", max_crop_fraction: 0.20,
+  # Raised to 0.254 on 2026-08-18, and the odd third decimal is the whole point:
+  # it is high enough for the worst crop Mike approved (The Anatomy Lesson at
+  # 25.33%) and low enough to keep out the next one he did not (The Old Musician
+  # at 25.64%). A 0.23 point gap. He reviewed all 36 candidates as pairs — whole
+  # picture beside the frame the television would show — and kept 31.
+  #
+  # The five refusals are not a band, they are scattered through the range, which
+  # is the finding: 29.7% ruins Liberty Leading the People while 30.9% leaves The
+  # Night Watch intact, because what matters is whether the discarded strips carry
+  # any of the composition. So the number cannot be raised further on argument
+  # alone. Two refusals fall below this figure and are held off the television by
+  # display_overrides; the other three are simply above it. Seven kept pieces are
+  # above it too and carry their own Artwork#max_crop_fraction.
+  #
+  # CHANGING THIS NUMBER HERE RE-SEEDS IT ONTO THE LIVE DISPLAY. It reached 0.20
+  # the same way and a re-seed would have quietly undone the review.
+  render_mode: "fill", max_crop_fraction: 0.254,
   # http, not file. This was a file drop for one day, because the uploader was a
   # cron script that had to read the rendition from somewhere. The upload now
   # lives in a Home Assistant integration, which fetches current.json and then
