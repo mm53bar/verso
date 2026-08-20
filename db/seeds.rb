@@ -54,18 +54,24 @@ collections = {
   [ name, collection ]
 end
 
-# Two screens, two shapes, two clocks. Both crop to fill — see
+# Two screens, two shapes, one clock. Both crop to fill — see
 # docs/adr/20260817-fit-the-screen-not-the-art.md, which reversed the matting the
 # television briefly had.
 #
-# They ran as ONE rotation until 2026-08-19: the kiosk led, the television
-# followed, and both rooms showed the same picture, so noticing a painting on the
-# TV and reading about it on the kiosk worked. What ended that is not a change of
-# mind about the idea. Delivering an artwork to a Frame TV takes it out of
-# whatever is on screen and switches it to art mode, so an hourly rotation
-# interrupted a show hourly. The television now changes once a day overnight, and
-# "once a day at 3am" cannot be said as an interval at all — see
-# docs/adr/20260819-a-clock-for-the-television.md.
+# ONE rotation, still. The kiosk leads and the television follows, so both rooms
+# show the same picture and noticing a painting on the TV then reading about it on
+# the kiosk works. That is the point of the project and nothing here weakens it.
+#
+# What changed on 2026-08-19 is the clock, for every screen at once. Delivering an
+# artwork to a Frame TV takes it out of whatever is on screen and switches it to
+# art mode, so an hourly rotation interrupted a show hourly. The rotation now runs
+# ONCE A DAY AT 03:00, and "once a day at 3am" cannot be said as an interval at
+# all — see docs/adr/20260819-a-clock-for-the-television.md.
+#
+# THE SCHEDULE BELONGS TO THE LEADER. A follower has no schedule of its own; it
+# moves when the leader does. So rotate_at goes on the kiosk, and the television's
+# is deliberately nil — a rotate_at left on a follower would sit there doing
+# nothing until the day somebody unfollowed it, and then silently govern.
 #
 # SCHEDULE FIELDS ARE SEEDED ONCE AND NEVER RE-SEEDED. cycle_seconds, rotate_at
 # and follows_display are assigned here only when the row is created, because
@@ -82,7 +88,14 @@ end
 # A screen of a different size is a new row, not a new size here: an Echo Show 5
 # is 960x480, a different aspect ratio again, and gets its own Display.
 kiosk = Display.find_or_initialize_by(slug: "kiosk-panel")
-kiosk.assign_attributes(cycle_seconds: 1.hour.to_i) if kiosk.new_record?
+if kiosk.new_record?
+  # The leader, so this is the whole house's schedule. Overnight and on the wall
+  # clock rather than on an interval: a television is watched at particular hours,
+  # so WHEN the art changes is the requirement. Nobody is watching at 3am, and an
+  # anchored time cannot drift into the evening the way a 24 hour interval
+  # measured from the last change does.
+  kiosk.assign_attributes(cycle_seconds: 1.day.to_i, rotate_at: "03:00")
+end
 kiosk.update!(
   name: "Kiosk panel", width: 1280, height: 800,
   delivery: "http", render_mode: "fill", active: true
@@ -90,12 +103,10 @@ kiosk.update!(
 
 television = Display.find_or_initialize_by(slug: "television")
 if television.new_record?
-  # Overnight, and on the wall clock rather than on an interval: a television is
-  # watched at particular hours, so WHEN it changes is the requirement. Nobody is
-  # watching at 3am, and an anchored time cannot drift into the evening the way a
-  # 24 hour interval measured from the last change does.
-  television.assign_attributes(cycle_seconds: 1.day.to_i, rotate_at: "03:00",
-                               follows_display: nil)
+  # A follower. cycle_seconds is required by the schema and unread here; rotate_at
+  # stays nil, because the kiosk holds the schedule for both.
+  television.assign_attributes(cycle_seconds: 1.day.to_i, rotate_at: nil,
+                               follows_display: kiosk)
 end
 television.update!(
   name: "Television", width: 3840, height: 2160,
@@ -139,14 +150,9 @@ television.update!(
   delivery: "http", file_path: nil, active: true
 )
 
-# Both screens carry everything. What actually reaches a screen is decided by
-# whether the picture suits that panel — computed, per display — and not by
-# curation lists pulling in two directions.
-#
-# Each screen now chooses for itself, so each gets the whole set it can render
-# rather than the intersection the follow arrangement forced. The kiosk clears 276
-# of 289 on its own where the shared set was 214, and those 62 extra pieces are
-# ones the 4K panel is simply too large for.
+# Both screens carry everything. Because the leader may only pick what its
+# followers can also render, what actually reaches a screen is decided by whether
+# the picture is big enough — not by curation lists pulling in two directions.
 
 # How often a collection comes up, per screen. This is the ONLY weight that acts
 # on a collection: Display#weight_for multiplies an artwork's own weight by the
@@ -166,8 +172,9 @@ COLLECTION_WEIGHTS = { "Cartoons" => 2 }.freeze
 [ kiosk, television ].each do |display|
   collections.each do |name, collection|
     pairing = DisplayCollection.find_or_initialize_by(display: display, collection: collection)
-    # Set on both screens, and consulted on both: each one picks its own artwork
-    # now, so each one weighs the collections itself.
+    # Set on both screens, though only the leader's is consulted — a follower is
+    # told what to show. If the television ever led, it should not silently
+    # change what comes up.
     pairing.update!(weight: COLLECTION_WEIGHTS.fetch(name, 1))
   end
 end

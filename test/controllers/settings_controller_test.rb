@@ -22,20 +22,20 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   end
 
   # A form whose field names the controller does not read fails silently: the
-# page looks right, the save reports success and nothing changes.
-test "the form posts the names the controller reads" do
-  @television.update!(rotate_at: "03:00")
+  # page looks right, the save reports success and nothing changes.
+  test "the form posts the names the controller reads" do
+    @television.update!(rotate_at: "03:00")
 
-  get settings_path
+    get settings_path
 
-  assert_select "form[action=?][method=?]", display_schedule_path(@television.slug), "post"
-  assert_select "input[name=?][value=?][checked]", "display[schedule_kind]", "daily"
-  assert_select "select[name=?]", "display[cycle_seconds]"
-  assert_select "input[name=?][value=?]", "display[rotate_at]", "03:00"
-  assert_select "select[name=?]", "display[follows_display_id]"
-end
+    assert_select "form[action=?][method=?]", display_schedule_path(@television.slug), "post"
+    assert_select "input[name=?][value=?][checked]", "display[schedule_kind]", "daily"
+    assert_select "select[name=?]", "display[cycle_seconds]"
+    assert_select "input[name=?][value=?]", "display[rotate_at]", "03:00"
+    assert_select "select[name=?]", "display[follows_display_id]"
+  end
 
-test "switching a screen to a daily time of day" do
+  test "switching a screen to a daily time of day" do
     patch display_schedule_path(@television.slug), headers: BROWSER, params: {
       display: { schedule_kind: "daily", rotate_at: "03:00",
                  cycle_seconds: @television.cycle_seconds, follows_display_id: "" }

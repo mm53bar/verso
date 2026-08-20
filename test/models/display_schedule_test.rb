@@ -144,6 +144,38 @@ class DisplayScheduleTest < ActiveSupport::TestCase
     end
   end
 
+  # The arrangement the house actually runs: ONE rotation on a daily clock. The
+  # schedule lives on the leader, and the follower is carried along by it, so both
+  # rooms change at 3am and go on showing the same picture.
+  test "a daily leader carries its followers at the anchor" do
+    kiosk = displays(:kiosk)
+    kiosk.update!(rotate_at: "03:00", cycle_seconds: 1.day.to_i)
+    @television.update!(rotate_at: nil, follows_display: kiosk)
+    kiosk.reload
+    kiosk.eligible_artworks.each { |artwork| attach(artwork) }
+
+    travel_to Time.zone.parse("2026-09-01 03:00") do
+      shown = kiosk.advance!
+
+      assert_not_nil shown
+      assert_equal shown, @television.reload.current_artwork,
+        "both rooms must be on the same picture, which is the point of one rotation"
+      assert_equal kiosk.current_since, @television.current_since
+    end
+
+    travel_to Time.zone.parse("2026-09-01 21:00") do
+      assert_not kiosk.due?, "an evening's viewing must not be interrupted"
+      assert_not @television.due?
+      assert_equal 6.hours.to_i, @television.seconds_remaining,
+        "a follower counts down to its leader's anchor, not to its own interval"
+    end
+
+    travel_to Time.zone.parse("2026-09-02 03:00") do
+      assert kiosk.due?
+      assert_not @television.due?, "a follower is still never due on its own account"
+    end
+  end
+
   test "the schedule reads as a sentence" do
     assert_equal "once a day at 03:00", @television.schedule_description
     assert_equal "every 30 minutes", displays(:kiosk).schedule_description
@@ -151,4 +183,14 @@ class DisplayScheduleTest < ActiveSupport::TestCase
     @television.update!(follows_display: displays(:kiosk))
     assert_equal "mirrors Kiosk panel", @television.schedule_description
   end
+
+  private
+    def attach(artwork)
+      return if artwork.original.attached?
+
+      artwork.original.attach(
+        io: file_fixture("landscape.jpg").open, filename: "landscape.jpg",
+        content_type: "image/jpeg"
+      )
+    end
 end
