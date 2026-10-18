@@ -16,6 +16,8 @@ class FeedsController < ApplicationController
     # likes to poll on.
     @seconds_remaining = @display.seconds_remaining
 
-    fresh_when(etag: [ @display, @artwork, @next_artwork ], last_modified: @display.current_since)
+    # The artist is in the etag because the feed carries its bio: editing one
+    # touches no other record here, and a client would be told nothing changed.
+    fresh_when(etag: [ @display, @artwork, @artwork&.artist, @next_artwork ], last_modified: @display.current_since)
   end
 end

@@ -24,6 +24,49 @@ class FeedsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 1800, body["cycle_seconds"]
   end
 
+  test "carries the story and the artist's bio, for a client that shows the writeup" do
+    @artwork.update!(story: "First paragraph.\n\nSecond paragraph.",
+                     story_source_name: "Wikipedia", story_source_url: "https://en.wikipedia.org/wiki/Tom_Thomson")
+
+    get display_current_url(@kiosk.slug)
+    body = response.parsed_body
+
+    assert_equal "First paragraph.\n\nSecond paragraph.", body["story"]
+    assert_equal "Wikipedia", body["story_source_name"]
+    assert_equal "https://en.wikipedia.org/wiki/Tom_Thomson", body["story_source_url"]
+    assert_equal artists(:thomson).bio, body["artist_bio"]
+    assert_equal "1877–1917", body["artist_lifespan"]
+    assert_equal "Canadian", body["artist_nationality"]
+  end
+
+  test "sends a missing story as missing, leaving the fallback to the client" do
+    @artwork.update!(story: nil, blurb: "A spoken line.")
+
+    get display_current_url(@kiosk.slug)
+    body = response.parsed_body
+
+    assert body.key?("story")
+    assert_nil body["story"]
+    assert_equal "A spoken line.", body["blurb"]
+  end
+
+  test "an artwork with no artist answers with empty artist fields" do
+    cartoon = artworks(:cartoon)
+    cartoon.original.attach(
+      io: file_fixture("landscape.jpg").open, filename: "landscape.jpg", content_type: "image/jpeg"
+    )
+    @kiosk.update!(current_artwork: cartoon)
+
+    get display_current_url(@kiosk.slug)
+    body = response.parsed_body
+
+    assert_response :success
+    %w[ artist artist_bio artist_lifespan artist_nationality ].each do |field|
+      assert body.key?(field), "#{field} should be present"
+      assert_nil body[field]
+    end
+  end
+
   test "the image url is addressed by artwork and display, not by storage key" do
     get display_current_url(@kiosk.slug)
     url = response.parsed_body["url"]
@@ -104,5 +147,18 @@ class FeedsControllerTest < ActionDispatch::IntegrationTest
 
     get display_current_url(@kiosk.slug), headers: { "If-None-Match" => etag }
     assert_response :not_modified
+  end
+
+  test "editing the artist's bio invalidates the cached feed" do
+    get display_current_url(@kiosk.slug)
+    etag = response.headers["ETag"]
+
+    travel 1.minute do
+      artists(:thomson).update!(bio: "A rewritten bio.")
+    end
+
+    get display_current_url(@kiosk.slug), headers: { "If-None-Match" => etag }
+    assert_response :success
+    assert_equal "A rewritten bio.", response.parsed_body["artist_bio"]
   end
 end

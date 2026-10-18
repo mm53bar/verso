@@ -29,6 +29,13 @@ if @artwork
   # Two story fields, deliberately: blurb is what gets spoken, story is what
   # gets read. See docs/adr/ and the Artwork model.
   json.blurb @artwork.blurb
+  json.story @artwork.story
+  json.story_source_name @artwork.story_source_name
+  json.story_source_url @artwork.story_source_url
+
+  json.artist_bio @artwork.artist&.bio
+  json.artist_lifespan @artwork.artist&.lifespan
+  json.artist_nationality @artwork.artist&.nationality
 else
   json.artwork_id nil
   json.url nil
